@@ -2,11 +2,11 @@ from flask import Flask, request, render_template
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route("/")
 def homePage():
-    return render_template('.\index.html')
+    return render_template('echo.html')
 
-@app.route("/fourms")
+@app.route("/forms", methods=["GET"])
 def listForms():
         return
 
