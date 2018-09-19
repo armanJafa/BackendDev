@@ -36,15 +36,15 @@ def homePage():
     init_db()
     return render_template('echo.html')
 
-#triggered once the find forms button is pressed
-@app.route("/forms", methods=["GET"])
-def listForms():
+#triggered once the find forums button is pressed
+@app.route("/forums", methods=["GET"])
+def listForums():
 
     return
 
-#triggered when the user wants to create a new form
-@app.route("/forms", methods=["POST"])
-def createForm():
+#triggered when the user wants to create a new forum
+@app.route("/forums", methods=["POST"])
+def createForum():
     return 
 
 def getJson():
