@@ -5,9 +5,9 @@ import sqlite3
 
 app = Flask(__name__)
 
-"""TODO: 
+"""TODO:
        figure out how to initialize the DB and connect the rest of the time
-       parse json 
+       parse json
        insert data to json
        update data
 """
@@ -36,16 +36,16 @@ def homePage():
     init_db()
     return render_template('echo.html')
 
-#triggered once the find forms button is pressed
-@app.route("/forms", methods=["GET"])
-def listForms():
+#triggered once the find forums button is pressed
+@app.route("/forums", methods=["GET"])
+def listforums():
 
     return
 
 #triggered when the user wants to create a new form
-@app.route("/forms", methods=["POST"])
+@app.route("/forums", methods=["POST"])
 def createForm():
-    return 
+    return
 
 def getJson():
     with open("data.json",'r') as inputFile:
