@@ -1,5 +1,5 @@
 --Dropping tables to clear data from DB for testing--
-DROP TABLE IF EXISTS forum;
+DROP TABLE IF EXISTS forums;
 DROP TABLE IF EXISTS threads;
 DROP TABLE IF EXISTS auth_users;
 DROP TABLE IF EXISTS posts;
@@ -38,11 +38,11 @@ CREATE TABLE auth_users (
 );
 
 --Generating test cases--
-INSERT INTO forums VALUES(1, "redis", "alice");
-INSERT INTO forums VALUES(2, "mongodb", "bob");
 INSERT INTO auth_users VALUES("alice", "Gr3atPA$$W0Rd");
 INSERT INTO auth_users VALUES("bob", "Gr3attPA$$W0Rd");
 INSERT INTO auth_users VALUES("charlie", "Gr3attPA$$W0Rd");
+INSERT INTO forums VALUES(1, "redis", "alice");
+INSERT INTO forums VALUES(2, "mongodb", "bob");
 INSERT INTO threads VALUES(1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT");
 INSERT INTO threads VALUES(2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT");
 INSERT INTO threads VALUES(3, 2, "Ask MongoDB questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT");

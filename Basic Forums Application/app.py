@@ -1,5 +1,5 @@
 #importing flask
-from flask import Flask, request, render_template,g
+from flask import Flask, request, render_template, g, jsonify
 import json
 import sqlite3
 
@@ -12,49 +12,63 @@ app = Flask(__name__)
        update data
 """
 
-#sets the path of the database
+###### DATABASE SETUP SECTION ######
+
+# Sets the path of the database
 DATABASE = './data.db'
 
-#connects to the database
+# Connects to the database
 def get_db():
-    db = getattr(g, '_data', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
-    return db
+  db = getattr(g, '_database', None)
+  if db is None:
+       db = g._database = sqlite3.connect(DATABASE)
+  return db
+
+def dict_factory(cursor, row):
+  d = {}
+  for idx, col in enumerate(cursor.description):
+    d[col[0]] = row[idx]
+  return d
 
 #initializes the data base using flask
 def init_db():
-    with app.app_context():
-        db = get_db()
-        with app.open_resource('init.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
+  with app.app_context():
+      db = get_db()
+      with app.open_resource('init.sql', mode='r') as f:
+          db.cursor().executescript(f.read())
+      db.commit()
+  print("*********************\nDATABASE INITALIZED\n*********************")
+
+init_db()
+
+def get_connections():
+  conn = sqlite3.connect(DATABASE)
+  conn.row_factory = dict_factory
+  cur = conn.cursor()
+  return cur
+
+###################################
 
 #starting point to the flask app
 @app.route("/")
 def homePage():
-    init_db()
-    return render_template('echo.html')
+    return "<h1>Test Page</h1>"
 
 #triggered once the find forums button is pressed
-@app.route("/forums", methods=["GET"])
-def listforums():
+@app.route("/forums/", methods=['GET','POST'])
+def forums():
+  con = get_gonnections()
+  all_forums = con.execute('SELECT * FROM forums').fetchall()
 
-    return
+  return jsonify(all_forums)
 
-#triggered when the user wants to create a new form
-@app.route("/forums", methods=["POST"])
-def createForm():
-    return
+### NOT WORKING YET, STILL WORKING ON GETTING VARIABLE FROM URL
+@app.route("/forums/<int:forum_id>", methods=['GET','POST'])
+def threads():
+  con = get_gonnections()
+  all_forums = con.execute('SELECT * FROM forums').fetchall()
 
-def getJson():
-    with open("data.json",'r') as inputFile:
-        data = json.load(inputFile)
-    return data
+  return print(forum_id)
 
-def setJson(data):
-
-    return
-
-if __name__ == "__main__":
-    app.run(debug=True)
+# if __name__ == "__main__":
+  app.run(debug=True)
