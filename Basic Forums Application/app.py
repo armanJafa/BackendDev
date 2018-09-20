@@ -57,18 +57,16 @@ def homePage():
 #triggered once the find forums button is pressed
 @app.route("/forums/", methods=['GET','POST'])
 def forums():
-  con = get_gonnections()
+  con = get_connections()
   all_forums = con.execute('SELECT * FROM forums').fetchall()
-
   return jsonify(all_forums)
 
 ### NOT WORKING YET, STILL WORKING ON GETTING VARIABLE FROM URL
 @app.route("/forums/<int:forum_id>", methods=['GET','POST'])
 def threads():
-  con = get_gonnections()
+  con = get_connections()
   all_forums = con.execute('SELECT * FROM forums').fetchall()
+  return print("forum_id")
 
-  return print(forum_id)
-
-# if __name__ == "__main__":
+if __name__ == "__main__":
   app.run(debug=True)
