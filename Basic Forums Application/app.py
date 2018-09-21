@@ -59,9 +59,9 @@ def homePage():
 def forums():
   con = get_connections()
   all_forums = con.execute('SELECT * FROM forums').fetchall()
-
   return jsonify(all_forums)
 
+<<<<<<< HEAD
 @app.route("/forums/<forum_id>", methods=['GET','POST'])
 def threads(forum_id):
   con = get_connections()
@@ -77,4 +77,14 @@ def posts(forum_id, thread_id):
   return jsonify(posts_by_ids)
 
 # if __name__ == "__main__":
+=======
+### NOT WORKING YET, STILL WORKING ON GETTING VARIABLE FROM URL
+@app.route("/forums/<int:forum_id>", methods=['GET','POST'])
+def threads():
+  con = get_connections()
+  all_forums = con.execute('SELECT * FROM forums').fetchall()
+  return print("forum_id")
+
+if __name__ == "__main__":
+>>>>>>> 6ef771476542e5f24fbba8e95c4d9e737375372b
   app.run(debug=True)
