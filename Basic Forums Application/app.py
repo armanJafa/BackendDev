@@ -1,6 +1,6 @@
 #importing flask
 from flask import Flask, request, render_template, g, jsonify
-from flask_basicauth import BasicAuth
+import json
 import sqlite3
 
 app = Flask(__name__)
@@ -54,30 +54,13 @@ def get_connections():
 def homePage():
     return "<h1>Test Page</h1>"
 
-### Extract data from database forums table and convert to JSON
+#triggered once the find forums button is pressed
 @app.route("/forums/", methods=['GET','POST'])
 def forums():
   con = get_connections()
   all_forums = con.execute('SELECT * FROM forums').fetchall()
   return jsonify(all_forums)
 
-<<<<<<< HEAD
-@app.route("/forums/<forum_id>", methods=['GET','POST'])
-def threads(forum_id):
-  con = get_connections()
-  forums_by_id = con.execute('SELECT * FROM threads WHERE forum_id = ' + forum_id).fetchall()
-
-  return jsonify(forums_by_id)
-
-@app.route("/forums/<forum_id>/<thread_id>", methods=['GET','POST'])
-def posts(forum_id, thread_id):
-  con = get_connections()
-  posts_by_ids = con.execute('SELECT * FROM posts INNER JOIN threads ON posts.thread_id = threads.id').fetchall()
-  
-  return jsonify(posts_by_ids)
-
-# if __name__ == "__main__":
-=======
 ### NOT WORKING YET, STILL WORKING ON GETTING VARIABLE FROM URL
 @app.route("/forums/<int:forum_id>", methods=['GET','POST'])
 def threads():
@@ -86,5 +69,4 @@ def threads():
   return print("forum_id")
 
 if __name__ == "__main__":
->>>>>>> 6ef771476542e5f24fbba8e95c4d9e737375372b
   app.run(debug=True)
