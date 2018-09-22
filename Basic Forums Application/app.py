@@ -81,6 +81,7 @@ def forums():
 
     if(check_validForum(req_data)):
 
+<<<<<<< HEAD
       #inserts into the database
       conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
       
@@ -139,6 +140,15 @@ def posts():
 def users():
 
   return None
+=======
+#triggered once the a forum has been selected,
+@app.route("/forums/<forum_id>", methods=['GET','POST'])
+def threads(forum_id):
+  con = get_connections()
+  query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
+  all_threads = con.execute(query).fetchall()
+  return jsonify(all_threads)
+>>>>>>> master
 
 if __name__ == "__main__":
   app.run(debug=True)
