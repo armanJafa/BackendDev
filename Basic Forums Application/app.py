@@ -61,12 +61,13 @@ def forums():
   all_forums = con.execute('SELECT * FROM forums').fetchall()
   return jsonify(all_forums)
 
-### NOT WORKING YET, STILL WORKING ON GETTING VARIABLE FROM URL
-@app.route("/forums/<int:forum_id>", methods=['GET','POST'])
-def threads():
+#triggered once the a forum has been selected,
+@app.route("/forums/<forum_id>", methods=['GET','POST'])
+def threads(forum_id):
   con = get_connections()
-  all_forums = con.execute('SELECT * FROM forums').fetchall()
-  return print("forum_id")
+  query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
+  all_threads = con.execute(query).fetchall()
+  return jsonify(all_threads)
 
 if __name__ == "__main__":
   app.run(debug=True)
