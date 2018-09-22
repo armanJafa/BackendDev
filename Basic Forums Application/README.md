@@ -16,4 +16,4 @@ Using *pip3* run in terminal:\
 
 ### How to install Flask-BasicAuth
 Using *pip3* run in terminal:\
-``` pip install Flask-BasicAuth ```
+``` pip3 install Flask-BasicAuth ```
