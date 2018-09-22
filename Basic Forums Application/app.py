@@ -5,13 +5,6 @@ import sqlite3
 
 app = Flask(__name__)
 
-"""TODO:
-       figure out how to initialize the DB and connect the rest of the time
-       parse json
-       insert data to json
-       update data
-"""
-
 ###### DATABASE SETUP SECTION ######
 
 # Sets the path of the database
@@ -65,19 +58,42 @@ def homePage():
     check_validForum("h")
     return "<h1>Test Page</h1>"
 
-#triggered once the find forums button is pressed
+'''TODO: 
+      check to see if auth user is doing POST
+      add the authorized creator to the insert for the POST to sql
+      add the location header 
+'''
 @app.route("/forums/", methods=['GET','POST'])
 def forums():
   if request.method == 'POST':
-    #
+    #connects to db
     conn = get_connections()
+    #pulls all forums and makes it to a json obj
     all_forums = conn.execute('SELECT * FROM forums').fetchall()
     req_data = request.get_json()
+    
     #this keeps anyone from posting unneeded data fields
-    temp = {"name":req_data["name"]}
+    temp = {"name":req_data['name']}
+
     if(check_validForum(req_data)):
-      all_forums.insert(0, req_data)
-    return None
+
+      #inserts into the database
+      conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
+      
+      #pulls all forums and makes it to a json obj
+      all_forums = conn.execute('SELECT * FROM forums').fetchall()
+      print(all_forums)
+      
+      #returns a response
+      response = Response("",201,mimetype = 'application/json')
+      response.headers['Location'] = ""
+    
+    #if th conflict exisits return an error message
+    else:
+      invalMsg = {"error":"Conflict if forum exists"}
+      response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
+    return response
+
   else:
     con = get_connections()
     all_forums = con.execute('SELECT * FROM forums').fetchall()
@@ -89,10 +105,6 @@ def threads():
   con = get_connections()
   all_forums = con.execute('SELECT * FROM forums').fetchall()
   return print("forum_id")
-
-# @app.route("/forums/<int:forum_id>/<int:thread_id>", methods="Post")
-# def post_thread():
-#   conn = get_connections()
 
 if __name__ == "__main__":
   app.run(debug=True)
