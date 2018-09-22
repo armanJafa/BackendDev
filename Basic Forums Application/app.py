@@ -1,4 +1,3 @@
-#importing flask
 from flask import Flask, request, render_template, g, jsonify,Response
 import json
 import sqlite3
@@ -6,7 +5,6 @@ import sqlite3
 app = Flask(__name__)
 
 ###### DATABASE SETUP SECTION ######
-
 # Sets the path of the database
 DATABASE = './data.db'
 
@@ -34,12 +32,18 @@ def init_db():
 
 init_db()
 
+#connects to DB
 def get_connections():
   conn = sqlite3.connect(DATABASE)
   conn.row_factory = dict_factory
   cur = conn.cursor()
   return cur
 
+###################################
+
+###### VALIDATION SECTION ######
+
+#checks for valid new Forum entry
 def check_validForum(value):
   conn = get_connections()
   all_info = conn.execute('SELECT * FROM forums').fetchall()
@@ -99,13 +103,42 @@ def forums():
     all_forums = con.execute('SELECT * FROM forums').fetchall()
     return jsonify(all_forums)
 
-### NOT WORKING YET, STILL WORKING ON GETTING VARIABLE FROM URL
+''' TODO:
+          create the post method
+              check for a valid forum entry 
+              get timestamp for the post 
+              get author for the post
+'''
 @app.route("/forums/<int:forum_id>", methods=['GET','POST'])
 def threads():
-  con = get_connections()
-  all_forums = con.execute('SELECT * FROM forums').fetchall()
-  return print("forum_id")
+  if request.method == 'POST':
+    
+
+    return None
+  else:
+    con = get_connections()
+    all_forums = con.execute('SELECT * FROM forums').fetchall()
+    return print("forum_id")
+
+'''TODO:
+          create a GET for all posts
+          create a POST for posts
+'''
+@app.route("/forums/<int:forum_id>/<int:thread_id>", methods=['GET','POST'])
+def posts():
+  if request.method == 'POST':
+    return None
+  else:
+    return None
+
+'''TODO:
+          create a GET for all users 
+          create a POST for users
+'''
+@app.route("/users", methods=['GET','POST'])
+def users():
+
+  return None
 
 if __name__ == "__main__":
   app.run(debug=True)
-
