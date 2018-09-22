@@ -22,6 +22,10 @@ def dict_factory(cursor, row):
     d[col[0]] = row[idx]
   return d
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return "<h1>404</h1><p>The resource cannot be found.</p>", 404
+
 #initializes the data base using flask
 def init_db():
   with app.app_context():
@@ -49,7 +53,7 @@ def get_connections():
   TODO:   override the check credentials to check the db for user names and passwords.
           Needs to be tested
 '''
-#adds basic access auth to a flask app 
+#adds basic access auth to a flask app
 basic_auth = BasicAuth(app)
 # overriding basic auth to check db for authorized users
 class myAuthorizor(BasicAuth):
@@ -66,7 +70,7 @@ class myAuthorizor(BasicAuth):
 def check_validForum(value):
   conn = get_connections()
   all_info = conn.execute('SELECT * FROM forums').fetchall()
-  validNewForum = True 
+  validNewForum = True
   print(all_info)
   for forum in all_info:
     if forum["name"] == value["name"]:
@@ -82,10 +86,10 @@ def homePage():
     check_validForum("h")
     return "<h1>Test Page</h1>"
 
-'''TODO: 
+'''TODO:
       check to see if auth user is doing POST
       add the authorized creator to the insert for the POST to sql
-      add the location header 
+      add the location header
 '''
 @app.route("/forums/", methods=['GET'])
 def get_forums():
@@ -101,23 +105,23 @@ def post_forums():
   #pulls all forums and makes it to a json obj
   all_forums = conn.execute('SELECT * FROM forums').fetchall()
   req_data = request.get_json()
-  
+
   #this keeps anyone from posting unneeded data fields
   temp = {"name":req_data['name']}
 
   if(check_validForum(req_data)):
 
     #inserts into the database
-    conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
-    
+    #conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] + ', creator')
+
     #pulls all forums and makes it to a json obj
     all_forums = conn.execute('SELECT * FROM forums').fetchall()
     print(all_forums)
-    
+
     #returns a response
     response = Response("",201,mimetype = 'application/json')
     response.headers['Location'] = ""
-  
+
   #if th conflict exisits return an error message
   else:
     invalMsg = {"error":"Conflict if forum exists"}
@@ -132,7 +136,7 @@ def post_forums():
 #     #pulls all forums and makes it to a json obj
 #     all_forums = conn.execute('SELECT * FROM forums').fetchall()
 #     req_data = request.get_json()
-    
+
 #     #this keeps anyone from posting unneeded data fields
 #     temp = {"name":req_data['name']}
 
@@ -140,15 +144,15 @@ def post_forums():
 
 #       #inserts into the database
 #       conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
-      
+
 #       #pulls all forums and makes it to a json obj
 #       all_forums = conn.execute('SELECT * FROM forums').fetchall()
 #       print(all_forums)
-      
+
 #       #returns a response
 #       response = Response("",201,mimetype = 'application/json')
 #       response.headers['Location'] = ""
-    
+
 #     #if th conflict exisits return an error message
 #     else:
 #       invalMsg = {"error":"Conflict if forum exists"}
@@ -162,20 +166,22 @@ def post_forums():
 
 ''' TODO:
           create the post method
-              check for a valid forum entry 
-              get timestamp for the post 
+              check for a valid forum entry
+              get timestamp for the post
               get author for the post
 '''
-@app.route("/forums/<int:forum_id>", methods=['GET','POST'])
-def threads():
+@app.route("/forums/<forum_id>", methods=['GET','POST'])
+def threads(forum_id):
   if request.method == 'POST':
-    
-
     return None
   else:
     con = get_connections()
-    all_forums = con.execute('SELECT * FROM forums').fetchall()
-    return print("forum_id")
+    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
+    all_threads = con.execute(query).fetchall()
+    if len(all_threads)==0:
+        return page_not_found(404)
+    else:
+        return jsonify(all_threads)
 
 '''TODO:
           create a GET for all posts
@@ -186,10 +192,11 @@ def posts():
   if request.method == 'POST':
     return None
   else:
+
     return None
 
 '''TODO:
-          create a GET for all users 
+          create a GET for all users
           create a POST for users
 '''
 @app.route("/users", methods=['GET','POST'])
