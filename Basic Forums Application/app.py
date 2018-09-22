@@ -112,7 +112,7 @@ def post_forums():
   if(check_validForum(req_data)):
 
     #inserts into the database
-    #conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] + ', creator')
+    conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] + ', creator')
 
     #pulls all forums and makes it to a json obj
     all_forums = conn.execute('SELECT * FROM forums').fetchall()
