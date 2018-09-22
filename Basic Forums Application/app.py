@@ -1,5 +1,5 @@
 #importing flask
-from flask import Flask, request, render_template, g, jsonify
+from flask import Flask, request, render_template, g, jsonify,Response
 import json
 import sqlite3
 
@@ -47,19 +47,41 @@ def get_connections():
   cur = conn.cursor()
   return cur
 
+def check_validForum(value):
+  conn = get_connections()
+  all_info = conn.execute('SELECT * FROM forums').fetchall()
+  validNewForum = True 
+  print(all_info)
+  for forum in all_info:
+    if forum["name"] == value["name"]:
+      validNewForum = False
+  return validNewForum
+
 ###################################
 
 #starting point to the flask app
 @app.route("/")
 def homePage():
+    check_validForum("h")
     return "<h1>Test Page</h1>"
 
 #triggered once the find forums button is pressed
 @app.route("/forums/", methods=['GET','POST'])
 def forums():
-  con = get_connections()
-  all_forums = con.execute('SELECT * FROM forums').fetchall()
-  return jsonify(all_forums)
+  if request.method == 'POST':
+    #
+    conn = get_connections()
+    all_forums = conn.execute('SELECT * FROM forums').fetchall()
+    req_data = request.get_json()
+    #this keeps anyone from posting unneeded data fields
+    temp = {"name":req_data["name"]}
+    if(check_validForum(req_data)):
+      all_forums.insert(0, req_data)
+    return None
+  else:
+    con = get_connections()
+    all_forums = con.execute('SELECT * FROM forums').fetchall()
+    return jsonify(all_forums)
 
 ### NOT WORKING YET, STILL WORKING ON GETTING VARIABLE FROM URL
 @app.route("/forums/<int:forum_id>", methods=['GET','POST'])
@@ -68,5 +90,10 @@ def threads():
   all_forums = con.execute('SELECT * FROM forums').fetchall()
   return print("forum_id")
 
+# @app.route("/forums/<int:forum_id>/<int:thread_id>", methods="Post")
+# def post_thread():
+#   conn = get_connections()
+
 if __name__ == "__main__":
   app.run(debug=True)
+
