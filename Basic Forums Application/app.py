@@ -1,4 +1,5 @@
 from flask import Flask, request, render_template, g, jsonify,Response
+from flask_basicauth import BasicAuth
 import json
 import sqlite3
 
@@ -43,6 +44,24 @@ def get_connections():
 
 ###### VALIDATION SECTION ######
 
+
+'''
+  TODO:   override the check credentials to check the db for user names and passwords.
+          Needs to be tested
+'''
+#adds basic access auth to a flask app 
+basic_auth = BasicAuth(app)
+# overriding basic auth to check db for authorized users
+class myAuthorizor(BasicAuth):
+  def check_credentials(self, username, password):
+    valid = False
+    conn = get_db()
+    data = conn.execute('SELECT * FROM users').fetchall
+    for entry in data:
+      if entry["username"] == username and entry["password"] == password:
+        valid = True
+    return valid
+
 #checks for valid new Forum entry
 def check_validForum(value):
   conn = get_connections()
@@ -53,6 +72,7 @@ def check_validForum(value):
     if forum["name"] == value["name"]:
       validNewForum = False
   return validNewForum
+
 
 ###################################
 
@@ -67,42 +87,78 @@ def homePage():
       add the authorized creator to the insert for the POST to sql
       add the location header 
 '''
-@app.route("/forums/", methods=['GET','POST'])
-def forums():
-  if request.method == 'POST':
-    #connects to db
-    conn = get_connections()
-    #pulls all forums and makes it to a json obj
-    all_forums = conn.execute('SELECT * FROM forums').fetchall()
-    req_data = request.get_json()
-    
-    #this keeps anyone from posting unneeded data fields
-    temp = {"name":req_data['name']}
-
-    if(check_validForum(req_data)):
-
-<<<<<<< HEAD
-      #inserts into the database
-      conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
-      
-      #pulls all forums and makes it to a json obj
-      all_forums = conn.execute('SELECT * FROM forums').fetchall()
-      print(all_forums)
-      
-      #returns a response
-      response = Response("",201,mimetype = 'application/json')
-      response.headers['Location'] = ""
-    
-    #if th conflict exisits return an error message
-    else:
-      invalMsg = {"error":"Conflict if forum exists"}
-      response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
-    return response
-
-  else:
+@app.route("/forums/", methods=['GET'])
+def get_forums():
     con = get_connections()
     all_forums = con.execute('SELECT * FROM forums').fetchall()
     return jsonify(all_forums)
+
+@app.route("/forums/", methods=['POST'])
+@basic_auth.required
+def post_forums():
+  #connects to db
+  conn = get_connections()
+  #pulls all forums and makes it to a json obj
+  all_forums = conn.execute('SELECT * FROM forums').fetchall()
+  req_data = request.get_json()
+  
+  #this keeps anyone from posting unneeded data fields
+  temp = {"name":req_data['name']}
+
+  if(check_validForum(req_data)):
+
+    #inserts into the database
+    conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
+    
+    #pulls all forums and makes it to a json obj
+    all_forums = conn.execute('SELECT * FROM forums').fetchall()
+    print(all_forums)
+    
+    #returns a response
+    response = Response("",201,mimetype = 'application/json')
+    response.headers['Location'] = ""
+  
+  #if th conflict exisits return an error message
+  else:
+    invalMsg = {"error":"Conflict if forum exists"}
+    response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
+  return response
+
+# @app.route("/forums/", methods=['GET','POST'])
+# def forums():
+#   if request.method == 'POST':
+#     #connects to db
+#     conn = get_connections()
+#     #pulls all forums and makes it to a json obj
+#     all_forums = conn.execute('SELECT * FROM forums').fetchall()
+#     req_data = request.get_json()
+    
+#     #this keeps anyone from posting unneeded data fields
+#     temp = {"name":req_data['name']}
+
+#     if(check_validForum(req_data)):
+
+#       #inserts into the database
+#       conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
+      
+#       #pulls all forums and makes it to a json obj
+#       all_forums = conn.execute('SELECT * FROM forums').fetchall()
+#       print(all_forums)
+      
+#       #returns a response
+#       response = Response("",201,mimetype = 'application/json')
+#       response.headers['Location'] = ""
+    
+#     #if th conflict exisits return an error message
+#     else:
+#       invalMsg = {"error":"Conflict if forum exists"}
+#       response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
+#     return response
+
+#   else:
+#     con = get_connections()
+#     all_forums = con.execute('SELECT * FROM forums').fetchall()
+#     return jsonify(all_forums)
 
 ''' TODO:
           create the post method
@@ -140,15 +196,6 @@ def posts():
 def users():
 
   return None
-=======
-#triggered once the a forum has been selected,
-@app.route("/forums/<forum_id>", methods=['GET','POST'])
-def threads(forum_id):
-  con = get_connections()
-  query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
-  all_threads = con.execute(query).fetchall()
-  return jsonify(all_threads)
->>>>>>> master
 
 if __name__ == "__main__":
   app.run(debug=True)
