@@ -35,8 +35,6 @@ def init_db():
       db.commit()
   print("*********************\nDATABASE INITALIZED\n*********************")
 
-init_db()
-
 #connects to DB
 def get_connections():
   conn = sqlite3.connect(DATABASE)
@@ -46,7 +44,6 @@ def get_connections():
 ###################################
 
 ###### VALIDATION SECTION ######
-
 
 '''
   TODO:   override the check credentials to check the db for user names and passwords.
@@ -58,12 +55,11 @@ def get_connections():
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password):
     valid = False
-    conn = get_db()
-    data = conn.execute('SELECT * FROM auth_users').fetchall
-    print(data)
-    # for entry in data:
-    #   if entry["username"] == username and entry["password"] == password:
-    #     valid = True
+    conn = get_connections()
+    data = conn.execute('SELECT * FROM auth_users').fetchall()
+    for entry in data:
+      if entry["username"] == username and entry["password"] == password:
+        valid = True
     return valid
 
 #checks for valid new Forum entry
@@ -71,7 +67,6 @@ def check_validForum(value):
   conn = get_connections()
   all_info = conn.execute('SELECT * FROM forums').fetchall()
   validNewForum = True
-  print(all_info)
   for forum in all_info:
     if forum["name"] == value["name"]:
       validNewForum = False
@@ -95,32 +90,32 @@ def homePage():
 def get_forums():
     con = get_connections()
     all_forums = con.execute('SELECT * FROM forums').fetchall()
+    print(all_forums)
     return jsonify(all_forums)
 
 @app.route("/forums/", methods=['POST'])
 #@basic_auth.required
 def post_forums():
-  #connects to db
-  conn = get_connections()
+  db = get_db()
+  db.row_factory = dict_factory
+  conn = db.cursor()
+
   #pulls all forums and makes it to a json obj
   all_forums = conn.execute('SELECT * FROM forums').fetchall()
   req_data = request.get_json()
-
   #this keeps anyone from posting unneeded data fields
-  temp = {"name":req_data['name']}
 
   if(check_validForum(req_data)):
     b_auth = myAuthorizor()
-    print(request.authorization['username'] + " " + request.authorization['password'])
-
-    if b_auth.check_credentials(request.authorization['username'], request.authorization['password']):
+    username = request.authorization['username']
+    password = request.authorization['password']
+    if b_auth.check_credentials(username, password):
       #inserts into the database
-      conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] + ', creator')
-
+      forumName = req_data['name']
+      conn.execute('INSERT INTO forums(name,creator) VALUES(\''+forumName+'\',\''+ username+'\')')
       #pulls all forums and makes it to a json obj
       all_forums = conn.execute('SELECT * FROM forums').fetchall()
-      print(all_forums)
-
+      db.commit()
       #returns a response
       response = Response("",201,mimetype = 'application/json')
       response.headers['Location'] = ""
@@ -212,4 +207,5 @@ def users():
   return None
 
 if __name__ == "__main__":
+  init_db()
   app.run(debug=True)
