@@ -187,13 +187,14 @@ def threads(forum_id):
           create a GET for all posts
           create a POST for posts
 '''
-@app.route("/forums/<int:forum_id>/<int:thread_id>", methods=['GET','POST'])
-def posts():
+@app.route("/forums/<forum_id>/<thread_id>", methods=['GET','POST'])
+def posts(forum_id, thread_id):
   if request.method == 'POST':
     return None
   else:
-
-    return None
+    con = get_connections()
+    all_posts = con.execute('SELECT * FROM posts WHERE thread_id IN (SELECT id FROM threads WHERE id=' + thread_id + ' AND forum_id=' + forum_id + ')').fetchall()
+    return jsonify(all_posts)
 
 '''TODO:
           create a GET for all users
