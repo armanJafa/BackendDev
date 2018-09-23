@@ -202,6 +202,49 @@ def posts(forum_id, thread_id):
     all_posts = con.execute('SELECT * FROM posts WHERE thread_id IN (SELECT id FROM threads WHERE id=' + thread_id + ' AND forum_id=' + forum_id + ')').fetchall()
     return jsonify(all_posts)
 
+@app.route("/users/<username>", methods=['PUT'])
+def change_password(username):
+  db = get_db()
+  db.row_factory = dict_factory
+  con = db.cursor()
+
+  check_user = con.execute('SELECT * FROM auth_users WHERE username= "' + username + '"').fetchall()
+
+  if len(check_user)==0:
+    ## RETURN 404 - USER NOT FOUND
+    message = {
+            'status': 404,
+            'message': 'User Not Found: ' + username,
+    }
+    resp = jsonify(message)
+    resp.status_code = 404
+
+    return resp
+
+  elif request.authorization['username'] != username:
+    message = {
+            'status': 409,
+            'message': 'Username: ' + username + ' does not match authorized user: ' + request.authorization['username'],
+    }
+    resp = jsonify(message)
+    resp.status_code = 409
+
+    return resp
+
+  user_update = request.get_json()
+  
+  con.execute('UPDATE auth_users SET password="' + user_update['password'] + '" WHERE username="' + username + '"')
+  updated_user = con.execute('SELECT * FROM auth_users WHERE username="' + username + '"').fetchall()
+
+  print("*****Checking Credentials*****")
+  print(check_user)
+  print(updated_user)
+  print("*****Checking Credentials*****")
+
+  db.commit()
+
+  return jsonify(updated_user)
+
 '''TODO:
           create a GET for all users
           create a POST for users
