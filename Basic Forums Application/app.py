@@ -43,7 +43,6 @@ def get_connections():
   conn.row_factory = dict_factory
   cur = conn.cursor()
   return cur
-
 ###################################
 
 ###### VALIDATION SECTION ######
@@ -54,16 +53,17 @@ def get_connections():
           Needs to be tested
 '''
 #adds basic access auth to a flask app
-basic_auth = BasicAuth(app)
+#basic_auth = BasicAuth(app)
 # overriding basic auth to check db for authorized users
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password):
     valid = False
     conn = get_db()
-    data = conn.execute('SELECT * FROM users').fetchall
-    for entry in data:
-      if entry["username"] == username and entry["password"] == password:
-        valid = True
+    data = conn.execute('SELECT * FROM auth_users').fetchall
+    print(data)
+    # for entry in data:
+    #   if entry["username"] == username and entry["password"] == password:
+    #     valid = True
     return valid
 
 #checks for valid new Forum entry
@@ -98,7 +98,7 @@ def get_forums():
     return jsonify(all_forums)
 
 @app.route("/forums/", methods=['POST'])
-@basic_auth.required
+#@basic_auth.required
 def post_forums():
   #connects to db
   conn = get_connections()
@@ -110,20 +110,26 @@ def post_forums():
   temp = {"name":req_data['name']}
 
   if(check_validForum(req_data)):
+    b_auth = myAuthorizor()
+    print(request.authorization['username'] + " " + request.authorization['password'])
 
-    #inserts into the database
-    conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] + ', creator')
+    if b_auth.check_credentials(request.authorization['username'], request.authorization['password']):
+      #inserts into the database
+      conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] + ', creator')
 
-    #pulls all forums and makes it to a json obj
-    all_forums = conn.execute('SELECT * FROM forums').fetchall()
-    print(all_forums)
+      #pulls all forums and makes it to a json obj
+      all_forums = conn.execute('SELECT * FROM forums').fetchall()
+      print(all_forums)
 
-    #returns a response
-    response = Response("",201,mimetype = 'application/json')
-    response.headers['Location'] = ""
-
+      #returns a response
+      response = Response("",201,mimetype = 'application/json')
+      response.headers['Location'] = ""
+    else:
+      invalMsg = {"error":"Invalid user"}
+      response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
   #if th conflict exisits return an error message
   else:
+    print("line 132")
     invalMsg = {"error":"Conflict if forum exists"}
     response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
   return response
