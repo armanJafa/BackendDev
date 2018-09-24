@@ -35,8 +35,6 @@ def init_db():
       db.commit()
   print("*********************\nDATABASE INITALIZED\n*********************")
 
-init_db()
-
 #connects to DB
 def get_connections():
   conn = sqlite3.connect(DATABASE)
@@ -47,36 +45,40 @@ def get_connections():
 
 ###### VALIDATION SECTION ######
 
-
+''' myAuthorizor:
+    param: takes in BasicAuth
+    uses:  used to override the check_credentials to check the Database 
+           for authorized users
 '''
-  TODO:   override the check credentials to check the db for user names and passwords.
-          Needs to be tested
-'''
-#adds basic access auth to a flask app
-#basic_auth = BasicAuth(app)
-# overriding basic auth to check db for authorized users
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password):
     valid = False
-    conn = get_db()
-    data = conn.execute('SELECT * FROM auth_users').fetchall
-    print(data)
-    # for entry in data:
-    #   if entry["username"] == username and entry["password"] == password:
-    #     valid = True
+    conn = get_connections()
+    data = conn.execute('SELECT * FROM auth_users').fetchall()
+    for entry in data:
+      if entry["username"] == username and entry["password"] == password:
+        valid = True
     return valid
+
+def valid_username(newUsername):
+  conn = get_connections()
+  data = conn.execute('SELECT * FROM auth_users').fetchall()
+  validNewUser = True
+  for user in data:
+    if user["username"] == newUsername:
+      validNewUser = False
+  return validNewUser
+
 
 #checks for valid new Forum entry
 def check_validForum(value):
   conn = get_connections()
   all_info = conn.execute('SELECT * FROM forums').fetchall()
   validNewForum = True
-  print(all_info)
   for forum in all_info:
     if forum["name"] == value["name"]:
       validNewForum = False
   return validNewForum
-
 
 ###################################
 
@@ -86,89 +88,51 @@ def homePage():
     check_validForum("h")
     return "<h1>Test Page</h1>"
 
-'''TODO:
-      check to see if auth user is doing POST
-      add the authorized creator to the insert for the POST to sql
-      add the location header
-'''
+
 @app.route("/forums/", methods=['GET'])
 def get_forums():
     con = get_connections()
     all_forums = con.execute('SELECT * FROM forums').fetchall()
+    print(all_forums)
     return jsonify(all_forums)
 
 @app.route("/forums/", methods=['POST'])
-#@basic_auth.required
 def post_forums():
-  #connects to db
-  conn = get_connections()
+  
+  b_auth = myAuthorizor()
+  db = get_db()
+  db.row_factory = dict_factory
+  conn = db.cursor()
+
   #pulls all forums and makes it to a json obj
   all_forums = conn.execute('SELECT * FROM forums').fetchall()
   req_data = request.get_json()
-
-  #this keeps anyone from posting unneeded data fields
-  temp = {"name":req_data['name']}
-
+  
+  #checks for valid forum entry
   if(check_validForum(req_data)):
-    b_auth = myAuthorizor()
-    print(request.authorization['username'] + " " + request.authorization['password'])
 
-    if b_auth.check_credentials(request.authorization['username'], request.authorization['password']):
+    #gets input from user
+    username = request.authorization['username']
+    password = request.authorization['password']
+
+    #checks to see if user has proper auth
+    if b_auth.check_credentials(username, password):
       #inserts into the database
-      conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] + ', creator')
+      forumName = req_data['name']
+      conn.execute('INSERT INTO forums(name,creator) VALUES(\''+forumName+'\',\''+ username+'\')')
+      db.commit()
 
-      #pulls all forums and makes it to a json obj
-      all_forums = conn.execute('SELECT * FROM forums').fetchall()
-      print(all_forums)
-
-      #returns a response
-      response = Response("",201,mimetype = 'application/json')
-      response.headers['Location'] = ""
+      #returns a success response
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/<forum_id> for new forum.",201,mimetype = 'application/json')
+      response.headers['Location'] = "/forums/" + forumName
     else:
-      invalMsg = {"error":"Invalid user"}
-      response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
+      invalMsg = "User not authenticated"
+      response = Response(invalMsg,409,mimetype = 'application/json')
   #if th conflict exisits return an error message
   else:
-    print("line 132")
-    invalMsg = {"error":"Conflict if forum exists"}
-    response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
+    invalMsg = "HTTP 409 Conflict if forum already exists"
+    response = Response(invalMsg,409,mimetype = 'application/json')
   return response
-
-# @app.route("/forums/", methods=['GET','POST'])
-# def forums():
-#   if request.method == 'POST':
-#     #connects to db
-#     conn = get_connections()
-#     #pulls all forums and makes it to a json obj
-#     all_forums = conn.execute('SELECT * FROM forums').fetchall()
-#     req_data = request.get_json()
-
-#     #this keeps anyone from posting unneeded data fields
-#     temp = {"name":req_data['name']}
-
-#     if(check_validForum(req_data)):
-
-#       #inserts into the database
-#       conn.execute('INSERT INTO forums(name, creator) VALUES(' + temp["name"] +', creator')
-
-#       #pulls all forums and makes it to a json obj
-#       all_forums = conn.execute('SELECT * FROM forums').fetchall()
-#       print(all_forums)
-
-#       #returns a response
-#       response = Response("",201,mimetype = 'application/json')
-#       response.headers['Location'] = ""
-
-#     #if th conflict exisits return an error message
-#     else:
-#       invalMsg = {"error":"Conflict if forum exists"}
-#       response = Response(json.dumps(invalMsg),409,mimetype = 'application/json')
-#     return response
-
-#   else:
-#     con = get_connections()
-#     all_forums = con.execute('SELECT * FROM forums').fetchall()
-#     return jsonify(all_forums)
 
 ''' TODO:
           create the post method
@@ -202,14 +166,28 @@ def posts(forum_id, thread_id):
     all_posts = con.execute('SELECT * FROM posts WHERE thread_id IN (SELECT id FROM threads WHERE id=' + thread_id + ' AND forum_id=' + forum_id + ')').fetchall()
     return jsonify(all_posts)
 
-'''TODO:
-          create a GET for all users
-          create a POST for users
-'''
-@app.route("/users", methods=['GET','POST'])
-def users():
 
-  return None
+@app.route("/users", methods=['POST'])
+def users():
+    
+    db = get_db()
+    db.row_factory = dict_factory
+    conn = db.cursor()
+
+    req_data = request.get_json()
+    newUser = req_data['username']
+    newPass = req_data['password']
+
+    if valid_username(newUser):
+      conn.execute('INSERT INTO auth_users(username,password) VALUES(\''+newUser+'\',\''+ newPass+'\')')
+      db.commit()
+      #returns a success response
+      response = Response("HTTP 201 Created",201,mimetype = 'application/json')
+    else: 
+      #returns a success response
+      response = Response("HTTP 409 Conflict if username already exists\n",409,mimetype = 'application/json')
+    return response
 
 if __name__ == "__main__":
+  init_db()
   app.run(debug=True)
