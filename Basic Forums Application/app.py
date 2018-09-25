@@ -142,12 +142,25 @@ def post_forums():
 '''
 @app.route("/forums/<forum_id>", methods=['GET','POST'])
 def threads(forum_id):
+  #init for authorization and db connection 
+  b_auth = myAuthorizor()
+  db = get_db()
+  db.row_factory = dict_factory
+  conn = db.cursor()
+  validPostThread = False
   if request.method == 'POST':
+    #checks to see if user has proper auth
+    if b_auth.check_credentials(username, password):
+      data = conn.execute('SELECT * from forums')
+      for forum in data:
+        if forum["id"] == forum_id:
+          validPostThread = True
+      if validPostThread:
+        return None
     return None
   else:
-    con = get_connections()
     query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
-    all_threads = con.execute(query).fetchall()
+    all_threads = conn.execute(query).fetchall()
     if len(all_threads)==0:
         return page_not_found(404)
     else:
