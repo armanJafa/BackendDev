@@ -47,7 +47,7 @@ def get_connections():
 
 ''' myAuthorizor:
     param: takes in BasicAuth
-    uses:  used to override the check_credentials to check the Database 
+    uses:  used to override the check_credentials to check the Database
            for authorized users
 '''
 class myAuthorizor(BasicAuth):
@@ -98,7 +98,7 @@ def get_forums():
 
 @app.route("/forums/", methods=['POST'])
 def post_forums():
-  
+
   b_auth = myAuthorizor()
   db = get_db()
   db.row_factory = dict_factory
@@ -107,7 +107,7 @@ def post_forums():
   #pulls all forums and makes it to a json obj
   all_forums = conn.execute('SELECT * FROM forums').fetchall()
   req_data = request.get_json()
-  
+
   #checks for valid forum entry
   if(check_validForum(req_data)):
 
@@ -140,11 +140,8 @@ def post_forums():
               get timestamp for the post
               get author for the post
 '''
-@app.route("/forums/<forum_id>", methods=['GET','POST'])
+@app.route("/forums/<forum_id>", methods=['GET'])
 def threads(forum_id):
-  if request.method == 'POST':
-    return None
-  else:
     con = get_connections()
     query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
     all_threads = con.execute(query).fetchall()
@@ -157,19 +154,19 @@ def threads(forum_id):
           create a GET for all posts
           create a POST for posts
 '''
-@app.route("/forums/<forum_id>/<thread_id>", methods=['GET','POST'])
+@app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
 def posts(forum_id, thread_id):
-  if request.method == 'POST':
-    return None
-  else:
     con = get_connections()
     all_posts = con.execute('SELECT * FROM posts WHERE thread_id IN (SELECT id FROM threads WHERE id=' + thread_id + ' AND forum_id=' + forum_id + ')').fetchall()
-    return jsonify(all_posts)
+    if len(all_posts) == 0:
+        return page_not_found(404)
+    else:
+        return jsonify(all_posts)
 
 
 @app.route("/users", methods=['POST'])
 def users():
-    
+
     db = get_db()
     db.row_factory = dict_factory
     conn = db.cursor()
@@ -183,7 +180,7 @@ def users():
       db.commit()
       #returns a success response
       response = Response("HTTP 201 Created",201,mimetype = 'application/json')
-    else: 
+    else:
       #returns a success response
       response = Response("HTTP 409 Conflict if username already exists\n",409,mimetype = 'application/json')
     return response
@@ -218,7 +215,7 @@ def change_password(username):
     return resp
 
   user_update = request.get_json()
-  
+
   con.execute('UPDATE auth_users SET password="' + user_update['password'] + '" WHERE username="' + username + '"')
   updated_user = con.execute('SELECT * FROM auth_users WHERE username="' + username + '"').fetchall()
 
