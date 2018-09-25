@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
+from time import gmtime, strftime
 import json
 import sqlite3
 
@@ -69,7 +70,6 @@ def valid_username(newUsername):
       validNewUser = False
   return validNewUser
 
-
 #checks for valid new Forum entry
 def check_validForum(value):
   conn = get_connections()
@@ -127,7 +127,7 @@ def post_forums():
       response.headers['Location'] = "/forums/" + forumName
     else:
       invalMsg = "User not authenticated"
-      response = Response(invalMsg,409,mimetype = 'application/json')
+      response = Response(invalMsg,401,mimetype = 'application/json')
   #if th conflict exisits return an error message
   else:
     invalMsg = "HTTP 409 Conflict if forum already exists"
@@ -141,28 +141,8 @@ def post_forums():
               get author for the post
 '''
 @app.route("/forums/<forum_id>", methods=['GET'])
-def threads(forum_id):
-<<<<<<< HEAD
-    con = get_connections()
-=======
-  #init for authorization and db connection 
-  b_auth = myAuthorizor()
-  db = get_db()
-  db.row_factory = dict_factory
-  conn = db.cursor()
-  validPostThread = False
-  if request.method == 'POST':
-    #checks to see if user has proper auth
-    if b_auth.check_credentials(username, password):
-      data = conn.execute('SELECT * from forums')
-      for forum in data:
-        if forum["id"] == forum_id:
-          validPostThread = True
-      if validPostThread:
-        return None
-    return None
-  else:
->>>>>>> working on post threads
+def get_threads(forum_id):
+    conn = get_connections()
     query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
     all_threads = conn.execute(query).fetchall()
     if len(all_threads)==0:
@@ -170,6 +150,43 @@ def threads(forum_id):
     else:
         return jsonify(all_threads)
 
+@app.route("/forums/<forum_id>", methods=['POST'])
+def post_threads(forum_id):
+  #init for authorization and db connection 
+  b_auth = myAuthorizor()
+  db = get_db()
+  db.row_factory = dict_factory
+  conn = db.cursor()
+  validPostThread = False
+  req_data = request.get_json()
+
+  #gets input from user
+  username = request.authorization['username']
+  password = request.authorization['password']
+
+  #checks to see if user has proper auth
+  if b_auth.check_credentials(username, password):
+    data = conn.execute('SELECT * from forums')
+    for forum in data:
+      if forum["id"] == forum_id:
+        validPostThread = True
+    if validPostThread:
+       #checks to see if user has proper auth
+      if b_auth.check_credentials(username, password):
+        date = strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
+        conn.execute('INSERT INTO posts(thread_id, body, creator, created) VALUES(\''+ forum_id + '\',\'' + req_data["body"] + '\',\'' + username + '\',\'' + date + '\')')
+        db.commit()
+
+        #returns a success response
+        response = Response("HTTP 201 Created\n" + "Location header field set to /forums/<forum_id> for new forum.",201,mimetype = 'application/json')
+        response.headers['Location'] = "/forums/" + forum_id + ""
+      else:
+        invalMsg = "User not authenticated"
+        response = Response(invalMsg,401,mimetype = 'application/json')
+    else:
+      response = Response()
+      invalMsg = "HTTP 404 Page Does Not Exisit"
+      response = Response(invalMsg,404,mimetype = 'application/json')
 '''TODO:
           create a GET for all posts
           create a POST for posts
