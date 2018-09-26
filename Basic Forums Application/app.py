@@ -83,8 +83,12 @@ def forum_id_found(value):
   all_info = conn.execute('SELECT * FROM forums').fetchall()
   validNewForum = False
   for forum in all_info:
+    print(forum["id"])
+    print(forum["id"] == int(value))
     if forum["id"] == value:
       validNewForum = True
+  conn.close()
+  print(validNewForum)
   return validNewForum
 
 def valid_username(newUsername):
@@ -219,7 +223,7 @@ def create_post(forum_id, thread_id):
 #########################################
 # POST - Create Threads
 #########################################
-@app.route("/forums/<forum_id>/", methods=['POST'])
+@app.route("/forums/<forum_id>", methods=['POST'])
 def create_threads(forum_id):
 
   db = get_db()
@@ -242,14 +246,14 @@ def create_threads(forum_id):
   
   #If authorized user, insert
   if(b_auth.check_credentials(username, password)):
-    if forum_id_found(forum_id):
+    if forum_id_found(int(forum_id)):
       con.execute('UPDATE threads SET id= id+1')
       con.execute('UPDATE posts SET thread_id= thread_id+1')
-      con.execute('INSERT INTO threads VALUES(\''+ 1 +'\', \''+ threadTitle +'\', \'' + username + '\',\'' + time_stamp + '\')')
-      con.execute('INSERT INTO posts VALUES(\'' + forum_id + '\' , 1, \'' + text + '\', \'' + username + '\',\'' + time_stamp + '\')')
+      con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (1,forum_id,threadTitle,username,time_stamp))
+      con.execute('INSERT INTO posts VALUES(?,?,?,?,?)', (forum_id, 1,text,username,time_stamp))
       db.commit()
-      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + threadTitle +" for new thread.",201,mimetype = 'application/json')
-      response.headers['Location'] = "/forums/" + forum_id + "/" + threadTitle
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
+      response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
     else: 
       invalMsg = "HTTP 404 Not Found"
       response = Response(invalMsg,404,mimetype = 'application/json')
