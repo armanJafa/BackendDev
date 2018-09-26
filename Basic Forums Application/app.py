@@ -210,7 +210,7 @@ def create_post(forum_id, thread_id):
           con.execute('INSERT INTO posts VALUES(' + forum_id + ', ' + thread_id + ',\'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
           db.commit()
           check_posts = con.execute('SELECT * FROM posts').fetchall()
-          response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + str(1) + "for new forum.", 201, mimetype = 'application/json')
+          response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + " for new forum.", 201, mimetype = 'application/json')
           response.headers['Location'] = "/forums/" + forum_id + "/" + thread_id + str(1)
         else:
           invalMsg = "HTTP 401 Not Authorized"
