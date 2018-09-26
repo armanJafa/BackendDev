@@ -1,3 +1,11 @@
+#########################################
+# FLASK - RESTful API for discussion forum
+# Created by: 
+# Andrew Nguyen, Austin Msuarez, Armin Jafa
+# CPSC 476 - Project 1
+# September 26, 2018
+#########################################
+
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 import json
@@ -5,8 +13,12 @@ import sqlite3
 import time, datetime
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 
-###### DATABASE SETUP SECTION ######
+#########################################
+# Initialzie, create and fill database
+#########################################
+
 # Sets the path of the database
 DATABASE = './data.db'
 
@@ -44,15 +56,18 @@ def get_connections():
   return cur
 
 init_db()
-###################################
 
-###### VALIDATION SECTION ######
+#########################################
+# Authorization section - Check valid user
+#########################################
 
-''' myAuthorizor:
-    param: takes in BasicAuth
-    uses:  used to override the check_credentials to check the Database
-           for authorized users
-'''
+#########################################
+# myAuthorizor:
+# param: takes in BasicAuth
+# uses:  used to override the check_credentials to check the Database
+# for authorized users
+#########################################
+
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password):
     valid = False
@@ -83,14 +98,9 @@ def check_validForum(value):
       validNewForum = False
   return validNewForum
 
-###################################
-
-#starting point to the flask app
-@app.route("/")
-def homePage():
-    check_validForum("h")
-    return "<h1>Test Page</h1>"
-
+#########################################
+# GET - Get all forums
+#########################################
 
 @app.route("/forums/", methods=['GET'])
 def get_forums():
@@ -98,6 +108,37 @@ def get_forums():
     all_forums = con.execute('SELECT * FROM forums').fetchall()
     print(all_forums)
     return jsonify(all_forums)
+
+#########################################
+# GET - Get all threads as requested
+#########################################
+
+@app.route("/forums/<forum_id>", methods=['GET'])
+def threads(forum_id):
+    con = get_connections()
+    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
+    all_threads = con.execute(query).fetchall()
+    if len(all_threads)==0:
+        return page_not_found(404)
+    else:
+        return jsonify(all_threads)
+
+#########################################
+# GET - Get all threads as requested
+#########################################
+
+@app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
+def posts(forum_id, thread_id):
+    con = get_connections()
+    all_posts = con.execute('SELECT * FROM posts WHERE posts.forum_id = ' + forum_id + ' AND posts.thread_id = ' + thread_id).fetchall()
+    if len(all_posts) == 0:
+        return page_not_found(404)
+    else:
+        return jsonify(all_posts)
+
+#########################################
+# POST - Create forum
+#########################################
 
 @app.route("/forums/", methods=['POST'])
 def post_forums():
@@ -137,34 +178,9 @@ def post_forums():
     response = Response(invalMsg,409,mimetype = 'application/json')
   return response
 
-''' TODO:
-          create the post method
-              check for a valid forum entry
-              get timestamp for the post
-              get author for the post
-'''
-@app.route("/forums/<forum_id>", methods=['GET'])
-def threads(forum_id):
-    con = get_connections()
-    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
-    all_threads = con.execute(query).fetchall()
-    if len(all_threads)==0:
-        return page_not_found(404)
-    else:
-        return jsonify(all_threads)
-
-'''TODO:
-          create a GET for all posts
-          create a POST for posts
-'''
-@app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
-def posts(forum_id, thread_id):
-    con = get_connections()
-    all_posts = con.execute('SELECT * FROM posts WHERE posts.forum_id = ' + forum_id + ' AND posts.thread_id = ' + thread_id).fetchall()
-    if len(all_posts) == 0:
-        return page_not_found(404)
-    else:
-        return jsonify(all_posts)
+#########################################
+# POST - Create post
+#########################################
 
 @app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
 def create_post(forum_id, thread_id):
@@ -190,7 +206,10 @@ def create_post(forum_id, thread_id):
       return jsonify(check_posts)
     else:
       return "USER NOT AUTH"
-    
+
+#########################################
+# POST - Creating User
+#########################################
 
 @app.route("/users", methods=['POST'])
 def users():
@@ -211,6 +230,10 @@ def users():
       #returns a success response
       response = Response("HTTP 409 Conflict if username already exists\n",409,mimetype = 'application/json')
     return response
+
+#########################################
+# PUT - Changing password per user request
+#########################################
 
 @app.route("/users/<username>", methods=['PUT'])
 def change_password(username):
