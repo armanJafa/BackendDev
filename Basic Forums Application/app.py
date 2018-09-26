@@ -78,6 +78,15 @@ class myAuthorizor(BasicAuth):
         valid = True
     return valid
 
+def forum_id_found(value):
+  conn = get_connections()
+  all_info = conn.execute('SELECT * FROM forums').fetchall()
+  validNewForum = False
+  for forum in all_info:
+    if forum["id"] == value:
+      validNewForum = True
+  return validNewForum
+
 def valid_username(newUsername):
   conn = get_connections()
   data = conn.execute('SELECT * FROM auth_users').fetchall()
@@ -167,7 +176,7 @@ def post_forums():
       db.commit()
 
       #returns a success response
-      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/<forum_id> for new forum.",201,mimetype = 'application/json')
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forumName +" for new forum.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forumName
     else:
       invalMsg = "User not authenticated"
@@ -206,6 +215,48 @@ def create_post(forum_id, thread_id):
       return jsonify(check_posts)
     else:
       return "USER NOT AUTH"
+
+#########################################
+# POST - Create Threads
+#########################################
+@app.route("/forums/<forum_id>/", methods=['POST'])
+def create_threads(forum_id):
+
+  db = get_db()
+  db.row_factory = dict_factory
+  con = db.cursor()
+  b_auth = myAuthorizor()
+  req_data = request.get_json()
+
+  #gets input from user
+  username = request.authorization['username']
+  password = request.authorization['password']
+
+  #gets json input
+  threadTitle = req_data["title"]
+  text = req_data["text"]
+
+  # Create the timestamp
+  ts = time.time()
+  time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
+  
+  #If authorized user, insert
+  if(b_auth.check_credentials(username, password)):
+    if forum_id_found(forum_id):
+      con.execute('UPDATE threads SET id= id+1')
+      con.execute('UPDATE posts SET thread_id= thread_id+1')
+      con.execute('INSERT INTO threads VALUES(\''+ 1 +'\', \''+ threadTitle +'\', \'' + username + '\',\'' + time_stamp + '\')')
+      #con.execute('INSERT INTO posts VALUES(1, 1, \'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
+      db.commit()
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + threadTitle +" for new thread.",201,mimetype = 'application/json')
+      response.headers['Location'] = "/forums/" + forum_id + "/" + threadTitle
+    else: 
+      invalMsg = "HTTP 404 Not Found"
+      response = Response(invalMsg,404,mimetype = 'application/json')
+  else:
+    invalMsg = "HTTP 401 Not Authorized"
+    response = Response(invalMsg,401,mimetype = 'application/json')
+  return response 
 
 #########################################
 # POST - Creating User
