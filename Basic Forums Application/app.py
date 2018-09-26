@@ -1,6 +1,6 @@
 #########################################
 # FLASK - RESTful API for discussion forum
-# Created by: 
+# Created by:
 # Andrew Nguyen, Austin Msuarez, Armin Jafa
 # CPSC 476 - Project 1
 # September 26, 2018
@@ -191,22 +191,27 @@ def create_post(forum_id, thread_id):
     check_user = request.authorization['username']
     check_pw = request.authorization['password']
 
-    # Get the post text
-    post_text = req_data['text']
+    forumCheck = con.execute('SELECT 1 FROM forums where id=' + forum_id).fetchall()
+    threadCheck = con.execute('SELECT 1 FROM threads where id=' + thread_id).fetchall()
 
-    # Create the timestamp
-    ts = time.time()
-    time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
-    print(time_stamp)
+    if len(forumCheck) != 0 or len(threadCheck) != 0:
+        # Get the post text
+        post_text = req_data['text']
 
-    #If authorized user, insert
-    if(b_auth.check_credentials(check_user, check_pw)):
-      con.execute('INSERT INTO posts VALUES(1, 1, \'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
-      check_posts = con.execute('SELECT * FROM posts').fetchall()
-      return jsonify(check_posts)
+        # Create the timestamp
+        ts = time.time()
+        time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
+        print(time_stamp)
+
+        #If authorized user, insert
+        if(b_auth.check_credentials(check_user, check_pw)):
+          con.execute('INSERT INTO posts VALUES(' + forum_id + ', ' + thread_id + ',\'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
+          check_posts = con.execute('SELECT * FROM posts').fetchall()
+          return jsonify(check_posts)
+        else:
+          return "USER NOT AUTH"
     else:
-      return "USER NOT AUTH"
-
+        return "DID NOT FIND THREAD OR FORUM ID"
 #########################################
 # POST - Creating User
 #########################################
@@ -279,5 +284,5 @@ def change_password(username):
   return jsonify(updated_user)
 
 if __name__ == "__main__":
-  
+
   app.run(debug=True)
