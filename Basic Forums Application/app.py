@@ -2,6 +2,7 @@ from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 import json
 import sqlite3
+import time, datetime
 
 app = Flask(__name__)
 
@@ -37,10 +38,12 @@ def init_db():
 
 #connects to DB
 def get_connections():
-  conn = sqlite3.connect(DATABASE)
+  conn = get_db()
   conn.row_factory = dict_factory
   cur = conn.cursor()
   return cur
+
+init_db()
 ###################################
 
 ###### VALIDATION SECTION ######
@@ -173,16 +176,40 @@ def threads(forum_id):
 @app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
 def posts(forum_id, thread_id):
     con = get_connections()
-    all_posts = con.execute('SELECT * FROM posts WHERE thread_id IN (SELECT id FROM threads WHERE id=' + thread_id + ' AND forum_id=' + forum_id + ')').fetchall()
+    all_posts = con.execute('SELECT * FROM posts WHERE posts.forum_id = ' + forum_id + ' AND posts.thread_id = ' + thread_id).fetchall()
     if len(all_posts) == 0:
         return page_not_found(404)
     else:
         return jsonify(all_posts)
 
+@app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
+def create_post(forum_id, thread_id):
+    con = get_connections()
+
+    b_auth = myAuthorizor()
+    req_data = request.get_json()
+    check_user = request.authorization['username']
+    check_pw = request.authorization['password']
+
+    # Get the post text
+    post_text = req_data['text']
+
+    # Create the timestamp
+    ts = time.time()
+    time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
+    print(time_stamp)
+
+    #If authorized user, insert
+    if(b_auth.check_credentials(check_user, check_pw)):
+      con.execute('INSERT INTO posts VALUES(1, 1, \'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
+      check_posts = con.execute('SELECT * FROM posts').fetchall()
+      return jsonify(check_posts)
+    else:
+      return "USER NOT AUTH"
+    
 
 @app.route("/users", methods=['POST'])
 def users():
-
     db = get_db()
     db.row_factory = dict_factory
     conn = db.cursor()
@@ -245,5 +272,5 @@ def change_password(username):
   return jsonify(updated_user)
 
 if __name__ == "__main__":
-  init_db()
+  
   app.run(debug=True)
