@@ -1,6 +1,10 @@
 #########################################
 # FLASK - RESTful API for discussion forum
+<<<<<<< HEAD
 # Created by:
+=======
+# Created by: 
+>>>>>>> Austins_Branch
 # Andrew Nguyen, Austin Msuarez, Armin Jafa
 # CPSC 476 - Project 1
 # September 26, 2018
@@ -78,6 +82,19 @@ class myAuthorizor(BasicAuth):
         valid = True
     return valid
 
+def forum_id_found(value):
+  conn = get_connections()
+  all_info = conn.execute('SELECT * FROM forums').fetchall()
+  validNewForum = False
+  for forum in all_info:
+    print(forum["id"])
+    print(forum["id"] == int(value))
+    if forum["id"] == value:
+      validNewForum = True
+  conn.close()
+  print(validNewForum)
+  return validNewForum
+
 def valid_username(newUsername):
   conn = get_connections()
   data = conn.execute('SELECT * FROM auth_users').fetchall()
@@ -116,7 +133,11 @@ def get_forums():
 @app.route("/forums/<forum_id>", methods=['GET'])
 def threads(forum_id):
     con = get_connections()
+<<<<<<< HEAD
     query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
+=======
+    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id + ' ORDER BY id'
+>>>>>>> Austins_Branch
     all_threads = con.execute(query).fetchall()
     if len(all_threads)==0:
         return page_not_found(404)
@@ -167,7 +188,7 @@ def post_forums():
       db.commit()
 
       #returns a success response
-      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/<forum_id> for new forum.",201,mimetype = 'application/json')
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forumName +" for new forum.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forumName
     else:
       invalMsg = "User not authenticated"
@@ -216,9 +237,56 @@ def create_post(forum_id, thread_id):
           invalMsg = "HTTP 401 Not Authorized"
           response = Response(invalMsg, 404, mimetype = 'application/json')
     else:
+<<<<<<< HEAD
         invalMsg = "HTTP 404 Not Found"
         response = Response(invalMsg, 404, mimetype = 'application/json')
     return response
+=======
+      return "USER NOT AUTH"
+
+#########################################
+# POST - Create Threads
+#########################################
+@app.route("/forums/<forum_id>", methods=['POST'])
+def create_threads(forum_id):
+
+  db = get_db()
+  db.row_factory = dict_factory
+  con = db.cursor()
+  b_auth = myAuthorizor()
+  req_data = request.get_json()
+
+  #gets input from user
+  username = request.authorization['username']
+  password = request.authorization['password']
+
+  #gets json input
+  threadTitle = req_data["title"]
+  text = req_data["text"]
+
+  # Create the timestamp
+  ts = time.time()
+  time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
+  
+  #If authorized user, insert
+  if(b_auth.check_credentials(username, password)):
+    if forum_id_found(int(forum_id)):
+      con.execute('UPDATE threads SET id= id+1')
+      con.execute('UPDATE posts SET thread_id= thread_id+1')
+      con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (1,forum_id,threadTitle,username,time_stamp))
+      con.execute('INSERT INTO posts VALUES(?,?,?,?,?)', (forum_id, 1,text,username,time_stamp))
+      db.commit()
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
+      response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
+    else: 
+      invalMsg = "HTTP 404 Not Found"
+      response = Response(invalMsg,404,mimetype = 'application/json')
+  else:
+    invalMsg = "HTTP 401 Not Authorized"
+    response = Response(invalMsg,401,mimetype = 'application/json')
+  return response 
+
+>>>>>>> Austins_Branch
 #########################################
 # POST - Creating User
 #########################################
@@ -291,5 +359,10 @@ def change_password(username):
   return jsonify(updated_user)
 
 if __name__ == "__main__":
+<<<<<<< HEAD
 
   app.run(debug=True)
+=======
+  
+  app.run(debug=True)
+>>>>>>> Austins_Branch
