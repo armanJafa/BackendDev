@@ -14,7 +14,7 @@ CREATE TABLE forums (
 );
 
 CREATE TABLE threads (
-	id INTEGER NOT NULL AUTOINCREMENT,
+	id INTEGER NOT NULL,
 	forum_id INT NOT NULL,
 	title TEXT NOT NULL,
 	creator TEXT NOT NULL,

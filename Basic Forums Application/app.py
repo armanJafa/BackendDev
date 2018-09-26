@@ -246,7 +246,7 @@ def create_threads(forum_id):
       con.execute('UPDATE threads SET id= id+1')
       con.execute('UPDATE posts SET thread_id= thread_id+1')
       con.execute('INSERT INTO threads VALUES(\''+ 1 +'\', \''+ threadTitle +'\', \'' + username + '\',\'' + time_stamp + '\')')
-      #con.execute('INSERT INTO posts VALUES(1, 1, \'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
+      con.execute('INSERT INTO posts VALUES(\'' + forum_id + '\' , 1, \'' + text + '\', \'' + username + '\',\'' + time_stamp + '\')')
       db.commit()
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + threadTitle +" for new thread.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forum_id + "/" + threadTitle
