@@ -48,4 +48,5 @@ INSERT INTO threads VALUES(2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 0
 INSERT INTO threads VALUES(1, 2, "Ask MongoDB questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT");
 INSERT INTO posts VALUES(1, 1, "I'm trying to connect to MongoDB, but it doesn't seem to be running.", "bob", "Tue, 04 Sep 2018 15:42:28 GMT");
 INSERT INTO posts VALUES(1, 1, "Ummm. maybe 'sudo service start mongodb'?", "bob", "Tue, 04 Sep 2018 15:45:36 GMT");
+INSERT INTO posts VALUES(1, 2, "I need help with it", "charlie", "Tue, 06 Sep 2018 17:18:43 GMT");
 INSERT INTO posts VALUES(2, 1, "It is some new framework for Redis.. disregard..", "charlie", "Tue, 04 Sep 2018 13:49:36 GMT");

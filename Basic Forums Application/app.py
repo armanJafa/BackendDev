@@ -1,6 +1,6 @@
 #########################################
 # FLASK - RESTful API for discussion forum
-# Created by: 
+# Created by:
 # Andrew Nguyen, Austin Msuarez, Armin Jafa
 # CPSC 476 - Project 1
 # September 26, 2018
@@ -233,46 +233,46 @@ def create_post(forum_id, thread_id):
         response = Response(invalMsg, 404, mimetype = 'application/json')
     return response
 
-#########################################		
- # POST - Create Threads		
- #########################################		
+#########################################
+ # POST - Create Threads
+ #########################################
 @app.route("/forums/<forum_id>", methods=['POST'])
 def create_threads(forum_id):
-  db = get_db()		
-  db.row_factory = dict_factory		
-  con = db.cursor()		
-  b_auth = myAuthorizor()		
-  req_data = request.get_json()		
-		
-  #gets input from user		
-  username = request.authorization['username']		
-  password = request.authorization['password']		
-		
-  #gets json input		
-  threadTitle = req_data["title"]		
-  text = req_data["text"]		
-		
-  # Create the timestamp		
-  ts = time.time()		
-  time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')		
-   		
-  #If authorized user, insert		
-  if(b_auth.check_credentials(username, password)):		
-    if forum_id_found(int(forum_id)):		
-      con.execute('UPDATE threads SET id= id+1')		
-      con.execute('UPDATE posts SET thread_id= thread_id+1')		
-      con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (1,forum_id,threadTitle,username,time_stamp))		
-      con.execute('INSERT INTO posts VALUES(?,?,?,?,?)', (forum_id, 1,text,username,time_stamp))		
-      db.commit()		
-      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')		
-      response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)		
-    else: 		
-      invalMsg = "HTTP 404 Not Found"		
-      response = Response(invalMsg,404,mimetype = 'application/json')		
-  else:		
-    invalMsg = "HTTP 401 Not Authorized"		
-    response = Response(invalMsg,401,mimetype = 'application/json')		
-  return response 
+  db = get_db()
+  db.row_factory = dict_factory
+  con = db.cursor()
+  b_auth = myAuthorizor()
+  req_data = request.get_json()
+
+  #gets input from user
+  username = request.authorization['username']
+  password = request.authorization['password']
+
+  #gets json input
+  threadTitle = req_data["title"]
+  text = req_data["text"]
+
+  # Create the timestamp
+  ts = time.time()
+  time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
+
+  #If authorized user, insert
+  if(b_auth.check_credentials(username, password)):
+    if forum_id_found(int(forum_id)):
+      con.execute('UPDATE threads SET id= id+1 WHERE forum_id =' + forum_id)
+      con.execute('UPDATE posts SET thread_id= thread_id+1')
+      con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (1,forum_id,threadTitle,username,time_stamp))
+      con.execute('INSERT INTO posts VALUES(?,?,?,?,?)', (forum_id, 1,text,username,time_stamp))
+      db.commit()
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
+      response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
+    else:
+      invalMsg = "HTTP 404 Not Found"
+      response = Response(invalMsg,404,mimetype = 'application/json')
+  else:
+    invalMsg = "HTTP 401 Not Authorized"
+    response = Response(invalMsg,401,mimetype = 'application/json')
+  return response
 
 #########################################
 # POST - Creating User
@@ -346,5 +346,5 @@ def change_password(username):
   return jsonify(updated_user)
 
 if __name__ == "__main__":
-  
+
   app.run(debug=True)
