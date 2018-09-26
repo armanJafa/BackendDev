@@ -129,7 +129,7 @@ def get_forums():
 @app.route("/forums/<forum_id>", methods=['GET'])
 def threads(forum_id):
     con = get_connections()
-    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
+    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id + ' ORDER BY id'
     all_threads = con.execute(query).fetchall()
     if len(all_threads)==0:
         return page_not_found(404)
