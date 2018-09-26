@@ -266,5 +266,4 @@ def change_password(username):
   return jsonify(updated_user)
 
 if __name__ == "__main__":
-  init_db()
   app.run(debug=True)
