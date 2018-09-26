@@ -184,7 +184,9 @@ def post_forums():
 
 @app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
 def create_post(forum_id, thread_id):
-    con = get_connections()
+    db = get_db()
+    db.row_factory = dict_factory
+    con = db.cursor()
 
     b_auth = myAuthorizor()
     req_data = request.get_json()
@@ -206,12 +208,17 @@ def create_post(forum_id, thread_id):
         #If authorized user, insert
         if(b_auth.check_credentials(check_user, check_pw)):
           con.execute('INSERT INTO posts VALUES(' + forum_id + ', ' + thread_id + ',\'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
+          db.commit()
           check_posts = con.execute('SELECT * FROM posts').fetchall()
-          return jsonify(check_posts)
+          response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + str(1) + "for new forum.", 201, mimetype = 'application/json')
+          response.headers['Location'] = "/forums/" + forum_id + "/" + thread_id + str(1)
         else:
-          return "USER NOT AUTH"
+          invalMsg = "HTTP 401 Not Authorized"
+          response = Response(invalMsg, 404, mimetype = 'application/json')
     else:
-        return "DID NOT FIND THREAD OR FORUM ID"
+        invalMsg = "HTTP 404 Not Found"
+        response = Response(invalMsg, 404, mimetype = 'application/json')
+    return response
 #########################################
 # POST - Creating User
 #########################################
