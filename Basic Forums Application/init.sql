@@ -31,6 +31,7 @@ CREATE TABLE posts (
 	FOREIGN KEY(creator) REFERENCES auth_users(username)
 );
 
+
 CREATE TABLE auth_users (
 	username TEXT PRIMARY KEY NOT NULL UNIQUE,
 	password TEXT NOT NULL

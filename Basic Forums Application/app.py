@@ -1,12 +1,24 @@
+#########################################
+# FLASK - RESTful API for discussion forum
+# Created by: 
+# Andrew Nguyen, Austin Msuarez, Armin Jafa
+# CPSC 476 - Project 1
+# September 26, 2018
+#########################################
+
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
-from time import gmtime, strftime
 import json
 import sqlite3
+import time, datetime
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 
-###### DATABASE SETUP SECTION ######
+#########################################
+# Initialzie, create and fill database
+#########################################
+
 # Sets the path of the database
 DATABASE = './data.db'
 
@@ -38,19 +50,24 @@ def init_db():
 
 #connects to DB
 def get_connections():
-  conn = sqlite3.connect(DATABASE)
+  conn = get_db()
   conn.row_factory = dict_factory
   cur = conn.cursor()
   return cur
-###################################
 
-###### VALIDATION SECTION ######
+init_db()
 
-''' myAuthorizor:
-    param: takes in BasicAuth
-    uses:  used to override the check_credentials to check the Database
-           for authorized users
-'''
+#########################################
+# Authorization section - Check valid user
+#########################################
+
+#########################################
+# myAuthorizor:
+# param: takes in BasicAuth
+# uses:  used to override the check_credentials to check the Database
+# for authorized users
+#########################################
+
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password):
     valid = False
@@ -70,6 +87,7 @@ def valid_username(newUsername):
       validNewUser = False
   return validNewUser
 
+
 #checks for valid new Forum entry
 def check_validForum(value):
   conn = get_connections()
@@ -80,14 +98,9 @@ def check_validForum(value):
       validNewForum = False
   return validNewForum
 
-###################################
-
-#starting point to the flask app
-@app.route("/")
-def homePage():
-    check_validForum("h")
-    return "<h1>Test Page</h1>"
-
+#########################################
+# GET - Get all forums
+#########################################
 
 @app.route("/forums/", methods=['GET'])
 def get_forums():
@@ -95,6 +108,37 @@ def get_forums():
     all_forums = con.execute('SELECT * FROM forums').fetchall()
     print(all_forums)
     return jsonify(all_forums)
+
+#########################################
+# GET - Get all threads as requested
+#########################################
+
+@app.route("/forums/<forum_id>", methods=['GET'])
+def threads(forum_id):
+    con = get_connections()
+    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
+    all_threads = con.execute(query).fetchall()
+    if len(all_threads)==0:
+        return page_not_found(404)
+    else:
+        return jsonify(all_threads)
+
+#########################################
+# GET - Get all threads as requested
+#########################################
+
+@app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
+def posts(forum_id, thread_id):
+    con = get_connections()
+    all_posts = con.execute('SELECT * FROM posts WHERE posts.forum_id = ' + forum_id + ' AND posts.thread_id = ' + thread_id).fetchall()
+    if len(all_posts) == 0:
+        return page_not_found(404)
+    else:
+        return jsonify(all_posts)
+
+#########################################
+# POST - Create forum
+#########################################
 
 @app.route("/forums/", methods=['POST'])
 def post_forums():
@@ -127,83 +171,48 @@ def post_forums():
       response.headers['Location'] = "/forums/" + forumName
     else:
       invalMsg = "User not authenticated"
-      response = Response(invalMsg,401,mimetype = 'application/json')
+      response = Response(invalMsg,409,mimetype = 'application/json')
   #if th conflict exisits return an error message
   else:
     invalMsg = "HTTP 409 Conflict if forum already exists"
     response = Response(invalMsg,409,mimetype = 'application/json')
   return response
 
-''' TODO:
-          create the post method
-              check for a valid forum entry
-              get timestamp for the post
-              get author for the post
-'''
-@app.route("/forums/<forum_id>", methods=['GET'])
-def get_threads(forum_id):
-    conn = get_connections()
-    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id
-    all_threads = conn.execute(query).fetchall()
-    if len(all_threads)==0:
-        return page_not_found(404)
-    else:
-        return jsonify(all_threads)
+#########################################
+# POST - Create post
+#########################################
 
-@app.route("/forums/<forum_id>", methods=['POST'])
-def post_threads(forum_id):
-  #init for authorization and db connection 
-  b_auth = myAuthorizor()
-  db = get_db()
-  db.row_factory = dict_factory
-  conn = db.cursor()
-  validPostThread = False
-  req_data = request.get_json()
-
-  #gets input from user
-  username = request.authorization['username']
-  password = request.authorization['password']
-
-  #checks to see if user has proper auth
-  if b_auth.check_credentials(username, password):
-    data = conn.execute('SELECT * from forums')
-    for forum in data:
-      if forum["id"] == forum_id:
-        validPostThread = True
-    if validPostThread:
-       #checks to see if user has proper auth
-      if b_auth.check_credentials(username, password):
-        date = strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
-        conn.execute('INSERT INTO posts(thread_id, body, creator, created) VALUES(\''+ forum_id + '\',\'' + req_data["body"] + '\',\'' + username + '\',\'' + date + '\')')
-        db.commit()
-
-        #returns a success response
-        response = Response("HTTP 201 Created\n" + "Location header field set to /forums/<forum_id> for new forum.",201,mimetype = 'application/json')
-        response.headers['Location'] = "/forums/" + forum_id + ""
-      else:
-        invalMsg = "User not authenticated"
-        response = Response(invalMsg,401,mimetype = 'application/json')
-    else:
-      response = Response()
-      invalMsg = "HTTP 404 Page Does Not Exisit"
-      response = Response(invalMsg,404,mimetype = 'application/json')
-'''TODO:
-          create a GET for all posts
-          create a POST for posts
-'''
-@app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
-def posts(forum_id, thread_id):
+@app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
+def create_post(forum_id, thread_id):
     con = get_connections()
-    all_posts = con.execute('SELECT * FROM posts WHERE thread_id IN (SELECT id FROM threads WHERE id=' + thread_id + ' AND forum_id=' + forum_id + ')').fetchall()
-    if len(all_posts) == 0:
-        return page_not_found(404)
-    else:
-        return jsonify(all_posts)
 
+    b_auth = myAuthorizor()
+    req_data = request.get_json()
+    check_user = request.authorization['username']
+    check_pw = request.authorization['password']
+
+    # Get the post text
+    post_text = req_data['text']
+
+    # Create the timestamp
+    ts = time.time()
+    time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
+    print(time_stamp)
+
+    #If authorized user, insert
+    if(b_auth.check_credentials(check_user, check_pw)):
+      con.execute('INSERT INTO posts VALUES(1, 1, \'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
+      check_posts = con.execute('SELECT * FROM posts').fetchall()
+      return jsonify(check_posts)
+    else:
+      return "USER NOT AUTH"
+
+#########################################
+# POST - Creating User
+#########################################
 
 @app.route("/users", methods=['POST'])
 def users():
-
     db = get_db()
     db.row_factory = dict_factory
     conn = db.cursor()
@@ -221,6 +230,10 @@ def users():
       #returns a success response
       response = Response("HTTP 409 Conflict if username already exists\n",409,mimetype = 'application/json')
     return response
+
+#########################################
+# PUT - Changing password per user request
+#########################################
 
 @app.route("/users/<username>", methods=['PUT'])
 def change_password(username):
@@ -266,4 +279,5 @@ def change_password(username):
   return jsonify(updated_user)
 
 if __name__ == "__main__":
+  
   app.run(debug=True)
