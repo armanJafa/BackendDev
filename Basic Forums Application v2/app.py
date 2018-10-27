@@ -9,9 +9,9 @@
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 import json
-import sqlite3
+# import sqlite3
 import time, datetime
-
+import myDb 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
@@ -25,44 +25,21 @@ shard0 = './shard0.db'
 shard1 = './shard1.db'
 shard2 = './shard2.db'
 
-# Connects to the database
-def get_db(DATABASE):
-  db = getattr(g, '_database', None)
-  if db is None:
-       db = g._database = sqlite3.connect(DATABASE)
-  return db
-
-def dict_factory(cursor, row):
-  d = {}
-  for idx, col in enumerate(cursor.description):
-    d[col[0]] = row[idx]
-  return d
 
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource cannot be found.</p>", 404
 
-#initializes the data base using flask
-def init_db(DATABASE):
-  with app.app_context():
-      db = get_db(DATABASE)
-      with app.open_resource('init.sql', mode='r') as f:
-          db.cursor().executescript(f.read())
-      db.commit()
-  print("*********************\nDATABASE INITALIZED\n*********************")
 
-#connects to DB
-def get_connections(DATABASE):
-  conn = get_db(DATABASE)
-  conn.row_factory = dict_factory
-  cur = conn.cursor()
-  return cur
+#initializes the databases
+myDb.init_db(DATABASE,"init.sql",app)
+# myDb.init_db(shard0,"shard0.sql",app)
+# myDb.init_db(shard1,"shard1.sql",app)
+# myDb.init_db(shard2,"shard2.sql",app)
 
-init_db(DATABASE)
-init_db(shard0)
-init_db(shard1)
-init_db(shard2)
-
+#finds the shard that the post is located
+def find_shard(id):
+    return "shard" + str(id%3)
 
 #########################################
 # Authorization section - Check valid user
@@ -74,19 +51,24 @@ init_db(shard2)
 # uses:  used to override the check_credentials to check the Database
 # for authorized users
 #########################################
-
-class myAuthorizor(BasicAuth,DATABASE):
+class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password, DATABASE):
     valid = False
-    conn = get_connections(DATABASE)
+    conn = myDb.get_connections(DATABASE)
     data = conn.execute('SELECT * FROM auth_users').fetchall()
     for entry in data:
       if entry["username"] == username and entry["password"] == password:
         valid = True
     return valid
 
+#########################################
+# forum_id_found:
+# param: takes in the 
+# uses:  used to override the check_credentials to check the Database
+# for authorized users
+#########################################
 def forum_id_found(value):
-  conn = get_connections(DATABASE)
+  conn = myDb.get_connections(DATABASE)
   all_info = conn.execute('SELECT * FROM forums').fetchall()
   validNewForum = False
   for forum in all_info:
@@ -99,7 +81,7 @@ def forum_id_found(value):
   return validNewForum
 
 def valid_username(newUsername):
-  conn = get_connections(DATABASE)
+  conn = myDb.get_connections(DATABASE)
   data = conn.execute('SELECT * FROM auth_users').fetchall()
   validNewUser = True
   for user in data:
@@ -110,7 +92,7 @@ def valid_username(newUsername):
 
 #checks for valid new Forum entry
 def check_validForum(value,DATABASE):
-  conn = get_connections(DATABASE)
+  conn = myDb.get_connections(DATABASE)
   all_info = conn.execute('SELECT * FROM forums').fetchall()
   validNewForum = True
   for forum in all_info:
@@ -124,7 +106,7 @@ def check_validForum(value,DATABASE):
 
 @app.route("/forums/", methods=['GET'])
 def get_forums():
-    con = get_connections(DATABASE)
+    con = myDb.get_connections(DATABASE)
     all_forums = con.execute('SELECT * FROM forums').fetchall()
     print(all_forums)
     return jsonify(all_forums)
@@ -135,7 +117,7 @@ def get_forums():
 
 @app.route("/forums/<forum_id>", methods=['GET'])
 def threads(forum_id):
-    con = get_connections(DATABASE)
+    con = myDb.get_connections(DATABASE)
     query = 'SELECT * FROM threads WHERE forum_id=' + forum_id + ' ORDER BY id'
     all_threads = con.execute(query).fetchall()
     if len(all_threads)==0:
@@ -149,7 +131,7 @@ def threads(forum_id):
 
 @app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
 def posts(forum_id, thread_id):
-    con = get_connections(DATABASE)
+    con = myDb.get_connections(DATABASE)
     all_posts = con.execute('SELECT * FROM posts WHERE posts.forum_id = ' + forum_id + ' AND posts.thread_id = ' + thread_id).fetchall()
     if len(all_posts) == 0:
         return page_not_found(404)
@@ -164,8 +146,8 @@ def posts(forum_id, thread_id):
 def post_forums():
 
   b_auth = myAuthorizor()
-  db = get_db(DATABASE)
-  db.row_factory = dict_factory
+  db = myDb.get_db(DATABASE)
+  db.row_factory = myDb.dict_factory
   conn = db.cursor()
 
   #pulls all forums and makes it to a json obj
@@ -185,7 +167,7 @@ def post_forums():
       forumName = req_data['name']
       conn.execute('INSERT INTO forums(name,creator) VALUES(\''+forumName+'\',\''+ username+'\')')
       db.commit()
-
+      
       #returns a success response
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forumName +" for new forum.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forumName
@@ -196,6 +178,8 @@ def post_forums():
   else:
     invalMsg = "HTTP 409 Conflict if forum already exists"
     response = Response(invalMsg,409,mimetype = 'application/json')
+  
+  db.close()
   return response
 
 #########################################
@@ -203,8 +187,12 @@ def post_forums():
 #########################################
 @app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
 def create_post(forum_id, thread_id):
-    db = get_db()
-    db.row_factory = dict_factory
+    
+    #TODO: find out how to add post using only one DB
+    #TODO: change the DATABASE to be the shard of thread_id mod 3
+
+    db = myDb.get_db(DATABASE)
+    db.row_factory = myDb.dict_factory
     con = db.cursor()
 
     b_auth = myAuthorizor()
@@ -225,7 +213,7 @@ def create_post(forum_id, thread_id):
         print(time_stamp)
 
         #If authorized user, insert
-        if(b_auth.check_credentials(check_user, check_pw)):
+        if(b_auth.check_credentials(check_user, check_pw, DATABASE)):
           con.execute('INSERT INTO posts VALUES(' + forum_id + ', ' + thread_id + ',\'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
           db.commit()
           check_posts = con.execute('SELECT * FROM posts').fetchall()
@@ -244,12 +232,15 @@ def create_post(forum_id, thread_id):
  #########################################
 @app.route("/forums/<forum_id>", methods=['POST'])
 def create_threads(forum_id):
-  db = get_db()
-  db.row_factory = dict_factory
-  con = db.cursor()
-  b_auth = myAuthorizor()
+  
+
   req_data = request.get_json()
 
+  db = myDb.get_db(DATABASE)
+  db.row_factory = myDb.dict_factory
+  con = db.cursor()
+  b_auth = myAuthorizor(DATABASE)
+  
   #gets input from user
   username = request.authorization['username']
   password = request.authorization['password']
@@ -278,6 +269,7 @@ def create_threads(forum_id):
   else:
     invalMsg = "HTTP 401 Not Authorized"
     response = Response(invalMsg,401,mimetype = 'application/json')
+  db.close()
   return response
 
 #########################################
@@ -286,8 +278,8 @@ def create_threads(forum_id):
 
 @app.route("/users", methods=['POST'])
 def users():
-    db = get_db(DATABASE)
-    db.row_factory = dict_factory
+    db = myDb.get_db(DATABASE)
+    db.row_factory = myDb.dict_factory
     conn = db.cursor()
 
     req_data = request.get_json()
@@ -310,8 +302,8 @@ def users():
 
 @app.route("/users/<username>", methods=['PUT'])
 def change_password(username):
-  db = get_db(DATABASE)
-  db.row_factory = dict_factory
+  db = myDb.get_db(DATABASE)
+  db.row_factory = myDb.dict_factory
   con = db.cursor()
 
   check_user = con.execute('SELECT * FROM auth_users WHERE username= "' + username + '"').fetchall()
