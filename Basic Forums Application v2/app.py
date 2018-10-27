@@ -165,7 +165,7 @@ def post_forums():
     if b_auth.check_credentials(username, password,DATABASE):
       #inserts into the database
       forumName = req_data['name']
-      conn.execute('INSERT INTO forums(name,creator) VALUES(\''+forumName+'\',\''+ username+'\')')
+      conn.execute('INSERT INTO forums(name,creator) VALUES(?,?)', (forumName,username))
       db.commit()
       
       #returns a success response
@@ -214,7 +214,7 @@ def create_post(forum_id, thread_id):
 
         #If authorized user, insert
         if(b_auth.check_credentials(check_user, check_pw, DATABASE)):
-          con.execute('INSERT INTO posts VALUES(' + forum_id + ', ' + thread_id + ',\'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
+          con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id, post_text,check_user,time_stamp))
           db.commit()
           check_posts = con.execute('SELECT * FROM posts').fetchall()
           response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + " for new forum.", 201, mimetype = 'application/json')
@@ -254,7 +254,7 @@ def create_threads(forum_id):
   time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
 
   #If authorized user, insert
-  if(b_auth.check_credentials(username, password)):
+  if(b_auth.check_credentials(username, password, DATABASE)):
     if forum_id_found(int(forum_id)):
       con.execute('UPDATE threads SET id= id+1 WHERE forum_id =' + forum_id)
       con.execute('UPDATE posts SET thread_id= thread_id+1')
@@ -287,7 +287,7 @@ def users():
     newPass = req_data['password']
 
     if valid_username(newUser):
-      conn.execute('INSERT INTO auth_users(username,password) VALUES(\''+newUser+'\',\''+ newPass+'\')')
+      conn.execute('INSERT INTO auth_users(username,password) VALUES(?,?)',(newUser,newPass))
       db.commit()
       #returns a success response
       response = Response("HTTP 201 Created",201,mimetype = 'application/json')
