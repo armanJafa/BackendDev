@@ -89,7 +89,6 @@ def valid_username(newUsername):
       validNewUser = False
   return validNewUser
 
-
 #checks for valid new Forum entry
 def check_validForum(value,DATABASE):
   conn = myDb.get_connections(DATABASE)
@@ -103,7 +102,6 @@ def check_validForum(value,DATABASE):
 #########################################
 # GET - Get all forums
 #########################################
-
 @app.route("/forums/", methods=['GET'])
 def get_forums():
     con = myDb.get_connections(DATABASE)
@@ -114,7 +112,6 @@ def get_forums():
 #########################################
 # GET - Get all threads as requested
 #########################################
-
 @app.route("/forums/<forum_id>", methods=['GET'])
 def threads(forum_id):
     con = myDb.get_connections(DATABASE)
@@ -128,7 +125,6 @@ def threads(forum_id):
 #########################################
 # GET - Get all threads as requested
 #########################################
-
 @app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
 def posts(forum_id, thread_id):
     con = myDb.get_connections(DATABASE)
@@ -141,7 +137,6 @@ def posts(forum_id, thread_id):
 #########################################
 # POST - Create forum
 #########################################
-
 @app.route("/forums/", methods=['POST'])
 def post_forums():
 
@@ -187,16 +182,20 @@ def post_forums():
 #########################################
 @app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
 def create_post(forum_id, thread_id):
-    
-    #TODO: find out how to add post using only one DB
-    #TODO: change the DATABASE to be the shard of thread_id mod 3
 
+    #TODO: change the DATABASE to be the shard of thread_id mod 3
+    req_data = request.get_json()
+    shard = find_shard(thread_id)
+    db = myDb.get_db(shard)
+    db.row_factory = myDb.dict_factory
+    conn = db.cursor()
+
+    #TODO: find out how to add post using only one DB
     db = myDb.get_db(DATABASE)
     db.row_factory = myDb.dict_factory
     con = db.cursor()
 
     b_auth = myAuthorizor()
-    req_data = request.get_json()
     check_user = request.authorization['username']
     check_pw = request.authorization['password']
 
