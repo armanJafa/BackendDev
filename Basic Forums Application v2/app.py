@@ -10,7 +10,7 @@ from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 import json
 import time, datetime
-import myDb 
+import myDb
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
@@ -32,13 +32,13 @@ def page_not_found(e):
 
 #initializes the databases
 myDb.init_db(DATABASE,"init.sql",app)
-# myDb.init_db(shard0,"shard0.sql",app)
-# myDb.init_db(shard1,"shard1.sql",app)
-# myDb.init_db(shard2,"shard2.sql",app)
+myDb.init_db(shard0,"initShard.sql",app)
+myDb.init_db(shard1,"initShard.sql",app)
+myDb.init_db(shard2,"initShard.sql",app)
 
 #finds the shard that the post is located
 def find_shard(id):
-    return "shard" + str(id%3)
+    return "./shard" + str(int(id)%3) + ".db"
 
 #########################################
 # Authorization section - Check valid user
@@ -62,7 +62,7 @@ class myAuthorizor(BasicAuth):
 
 #########################################
 # forum_id_found:
-# param: takes in the 
+# param: takes in the
 # uses:  used to override the check_credentials to check the Database
 # for authorized users
 #########################################
@@ -122,11 +122,12 @@ def threads(forum_id):
         return jsonify(all_threads)
 
 #########################################
-# GET - Get all threads as requested
+# GET - Get all posts as requested
 #########################################
 @app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
 def posts(forum_id, thread_id):
-    con = myDb.get_connections(DATABASE)
+    shard = find_shard(thread_id)
+    con = myDb.get_connections(shard)
     all_posts = con.execute('SELECT * FROM posts WHERE posts.forum_id = ' + forum_id + ' AND posts.thread_id = ' + thread_id).fetchall()
     if len(all_posts) == 0:
         return page_not_found(404)
@@ -161,7 +162,7 @@ def post_forums():
       forumName = req_data['name']
       conn.execute('INSERT INTO forums(name,creator) VALUES(?,?)', (forumName,username))
       db.commit()
-      
+
       #returns a success response
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forumName +" for new forum.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forumName
@@ -172,7 +173,7 @@ def post_forums():
   else:
     invalMsg = "HTTP 409 Conflict if forum already exists"
     response = Response(invalMsg,409,mimetype = 'application/json')
-  
+
   db.close()
   return response
 
@@ -237,7 +238,7 @@ def create_threads(forum_id):
   db.row_factory = myDb.dict_factory
   con = db.cursor()
   b_auth = myAuthorizor(DATABASE)
-  
+
   #gets input from user
   username = request.authorization['username']
   password = request.authorization['password']
