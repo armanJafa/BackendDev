@@ -9,7 +9,6 @@
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 import json
-# import sqlite3
 import time, datetime
 import myDb 
 app = Flask(__name__)
@@ -232,7 +231,6 @@ def create_post(forum_id, thread_id):
  #########################################
 @app.route("/forums/<forum_id>", methods=['POST'])
 def create_threads(forum_id):
-  
 
   req_data = request.get_json()
 
