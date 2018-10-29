@@ -32,13 +32,13 @@ def page_not_found(e):
 
 #initializes the databases
 myDb.init_db(DATABASE,"init.sql",app)
-# myDb.init_db(shard0,"shard0.sql",app)
-# myDb.init_db(shard1,"shard1.sql",app)
-# myDb.init_db(shard2,"shard2.sql",app)
+myDb.init_db(shard0,"initShard.sql",app)
+myDb.init_db(shard1,"initShard.sql",app)
+myDb.init_db(shard2,"initShard.sql",app)
 
 #finds the shard that the post is located
 def find_shard(id):
-    return "shard" + str(id%3)
+    return "./shard" + str(int(id)%3) + ".db"
 
 #########################################
 # Authorization section - Check valid user
