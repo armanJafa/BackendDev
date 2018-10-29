@@ -14,7 +14,6 @@ def dict_factory(cursor, row):
     d[col[0]] = row[idx]
   return d
 
-
 #initializes the data base using flask
 def init_db(database, file_initializer,app):
   with app.app_context():
