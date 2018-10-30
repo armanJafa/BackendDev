@@ -103,7 +103,6 @@ with app.app_context():
 #####################################################################
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password, DATABASE):
-    print("hello")
     valid = False
     conn = myDb.get_connections(DATABASE)
     data = conn.execute('SELECT * FROM auth_users').fetchall()
@@ -123,12 +122,9 @@ def forum_id_found(value):
   all_info = conn.execute('SELECT * FROM forums').fetchall()
   validNewForum = False
   for forum in all_info:
-    print(forum["id"])
-    print(forum["id"] == int(value))
     if forum["id"] == value:
       validNewForum = True
   conn.close()
-  print(validNewForum)
   return validNewForum
 
 ############################################################
@@ -344,19 +340,21 @@ def create_threads(forum_id):
   #If authorized user, insert
   if(b_auth.check_credentials(username, password, DATABASE)):
     if forum_id_found(int(forum_id)):
-    # updates the ids
-    #   con.execute('UPDATE threads SET id= id+1 WHERE forum_id =' + forum_id)
-    #   con.execute('UPDATE posts SET thread_id= thread_id+1')
-    # inserting new items
       db = myDb.get_db(DATABASE)
       db.row_factory = myDb.dict_factory
       con = db.cursor()
-      con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (1,forum_id,threadTitle,username,time_stamp))
-      db.commit()
-      con.close()
+    # gets the top id
+      threadsList = con.execute('Select * FROM threads WHERE forum_id = ? ORDER BY id DESC LIMIT 0,1', (forum_id)).fetchall()
+      for thread in threadsList:
+          currentId = int(thread['id'])
 
-      insert_post(forum_id, 1, text, username, time_stamp)
-      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
+    # inserting new items
+      con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (currentId+1,forum_id,threadTitle,username,time_stamp))
+      db.commit()
+      db.close()
+
+      insert_post(forum_id, currentId+1, text, username, time_stamp)
+      response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(currentId+1) +" for new thread.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
     else:
       invalMsg = "HTTP 404 Not Found"
@@ -364,7 +362,6 @@ def create_threads(forum_id):
   else:
     invalMsg = "HTTP 401 Not Authorized"
     response = Response(invalMsg,401,mimetype = 'application/json')
-  db.close()
   return response
 
 #########################################
