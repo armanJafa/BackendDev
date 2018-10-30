@@ -45,27 +45,30 @@ def init_test_posts(forum_id, thread_id, body, creator, timestamp):
 
     if shard_num == 0:
       print("Shard number: " + str(shard_num) + " selected.")
-      con = myDb.get_db_s0()
+      db = myDb.get_db_s0()
     elif shard_num == 1:
       print("Shard number: " + str(shard_num) + " selected.")
-      con = myDb.get_db_s1()
+      db = myDb.get_db_s1()
     elif shard_num == 2:
       print("Shard number: " + str(shard_num) + " selected.")
-      con = myDb.get_db_s2()
+      db = myDb.get_db_s2()
 
+    db.row_factory = myDb.dict_factory
+    con = db.cursor()
     con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id,body,creator,timestamp))
+    db.commit()
 
-# with app.application_context():
-#   init_test_posts(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
-#   init_test_posts(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
-#   init_test_posts(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
-#   init_test_posts(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
-#   init_test_posts(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
-#   init_test_posts(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
-#   init_test_posts(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
-#   init_test_posts(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
-#   init_test_posts(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
-#   init_test_posts(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
+with app.app_context():
+  init_test_posts(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
+  init_test_posts(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
+  init_test_posts(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
+  init_test_posts(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
+  init_test_posts(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
+  init_test_posts(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
+  init_test_posts(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
+  init_test_posts(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
+  init_test_posts(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
+  init_test_posts(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
 
 #########################################
 # Authorization section - Check valid user
