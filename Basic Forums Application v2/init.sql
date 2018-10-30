@@ -15,8 +15,8 @@ CREATE TABLE forums (
 
 CREATE TABLE threads (
 	id INTEGER NOT NULL,
-	forum_id INT NOT NULL,
-	title TEXT NOT NULL,
+	forum_id INT NOT NULL ,
+	title TEXT NOT NULL PRIMARY KEY,
 	creator TEXT NOT NULL,
 	time_created TEXT NOT NULL,
 	FOREIGN KEY(creator) REFERENCES auth_users(username)

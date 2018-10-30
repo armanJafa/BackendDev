@@ -8,10 +8,14 @@
 
 #TODO: 
 '''
+    Basic_Auth:
+        fix basic auth
+
     THREADS:
         Need to be listed in reverse chronological order
         On creation the text needs to be added to the post shard
-
+        Update ids for threads and posts
+        
     POSTS:
         Creation needs to update timestamp of thread
         Need to add GUID
@@ -24,7 +28,7 @@ import time, datetime
 import myDb
 
 app = Flask(__name__)
-app.url_map.strict_slashes = False
+#app.url_map.strict_slashes = False
 
 #########################################
 # Initialzie, create and fill database
@@ -50,10 +54,13 @@ myDb.init_db(shard2,"initShard.sql",app)
 def find_shard(id):
     return "./shard" + str(int(id)%3) + ".db"
 
-
-def init_test_posts(forum_id, thread_id, body, creator, timestamp):
+#########################################
+# init_test_posts:
+# param: forum_id, thread_id, body, creator, timestamp
+# uses:  initializes the posts
+#########################################
+def insert_post(forum_id, thread_id, body, creator, timestamp):
     shard_num = int(thread_id) % 3
-
     if shard_num == 0:
       print("Shard number: " + str(shard_num) + " selected.")
       db = myDb.get_db_s0()
@@ -64,49 +71,53 @@ def init_test_posts(forum_id, thread_id, body, creator, timestamp):
       print("Shard number: " + str(shard_num) + " selected.")
       db = myDb.get_db_s2()
 
+    #initializing POSTs into the shards
     db.row_factory = myDb.dict_factory
     con = db.cursor()
     con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id,body,creator,timestamp))
     db.commit()
+    con.close()
 
+#begins initialization of the posts
 with app.app_context():
-  init_test_posts(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
-  init_test_posts(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
-  init_test_posts(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
-  init_test_posts(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
-  init_test_posts(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
-  init_test_posts(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
-  init_test_posts(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
-  init_test_posts(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
-  init_test_posts(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
-  init_test_posts(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
+  insert_post(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
+  insert_post(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
+  insert_post(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
+  insert_post(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
+  insert_post(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
+  insert_post(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
+  insert_post(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
+  insert_post(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
+  insert_post(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
+  insert_post(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
 
 #########################################
 # Authorization section - Check valid user
 #########################################
 
-#########################################
+#####################################################################
 # myAuthorizor:
 # param: takes in BasicAuth
 # uses:  used to override the check_credentials to check the Database
 # for authorized users
-#########################################
+#####################################################################
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password, DATABASE):
+    print("hello")
     valid = False
     conn = myDb.get_connections(DATABASE)
     data = conn.execute('SELECT * FROM auth_users').fetchall()
     for entry in data:
       if entry["username"] == username and entry["password"] == password:
         valid = True
+    conn.close()
     return valid
 
-#########################################
+#####################################################################
 # forum_id_found:
 # param: takes in the
 # uses:  used to override the check_credentials to check the Database
-# for authorized users
-#########################################
+#####################################################################
 def forum_id_found(value):
   conn = myDb.get_connections(DATABASE)
   all_info = conn.execute('SELECT * FROM forums').fetchall()
@@ -120,6 +131,11 @@ def forum_id_found(value):
   print(validNewForum)
   return validNewForum
 
+############################################################
+# valid_username:
+# param: newUsername
+# uses:  checks to see if the username isn't already used
+#############################################################
 def valid_username(newUsername):
   conn = myDb.get_connections(DATABASE)
   data = conn.execute('SELECT * FROM auth_users').fetchall()
@@ -129,7 +145,11 @@ def valid_username(newUsername):
       validNewUser = False
   return validNewUser
 
-#checks for valid new Forum entry
+############################################################
+# check_validForum:
+# param: value,DATABASE
+# uses:  checks to see if the forum isn't already used
+#############################################################
 def check_validForum(value,DATABASE):
   conn = myDb.get_connections(DATABASE)
   all_info = conn.execute('SELECT * FROM forums').fetchall()
@@ -139,19 +159,27 @@ def check_validForum(value,DATABASE):
       validNewForum = False
   return validNewForum
 
+############################################################
+# check_forum:
+# param: forum_id
+# uses:  checks to see if there is anything in the forum
+#############################################################
 def check_forum(forum_id):
   conn = myDb.get_connections(DATABASE)
   checkForum = conn.execute('SELECT * FROM forums WHERE id = ' + forum_id).fetchall()
-
   if len(checkForum) == 0:
     return False
   else:
     return True
 
+############################################################
+# check_thread:
+# param: thread_id, forum_id
+# uses:  checks to see if there is anything in the thread
+#############################################################
 def check_thread(thread_id, forum_id):
   conn = myDb.get_connections(DATABASE)
   checkThread = conn.execute('SELECT * FROM threads WHERE threads.id = ' + thread_id + ' AND threads.forum_id = ' + forum_id).fetchall()
-
   if len(checkThread) == 0:
     return False
   else:
@@ -205,7 +233,7 @@ def post_forums():
   conn = db.cursor()
 
   #pulls all forums and makes it to a json obj
-  all_forums = conn.execute('SELECT * FROM forums').fetchall()
+  #all_forums = conn.execute('SELECT * FROM forums').fetchall()
   req_data = request.get_json()
 
   #checks for valid forum entry
@@ -299,18 +327,15 @@ def create_threads(forum_id):
 
   req_data = request.get_json()
 
-  db = myDb.get_db(DATABASE)
-  db.row_factory = myDb.dict_factory
-  con = db.cursor()
-  b_auth = myAuthorizor(DATABASE)
+  b_auth = myAuthorizor()
 
   #gets input from user
   username = request.authorization['username']
   password = request.authorization['password']
 
   #gets json input
-  threadTitle = req_data["title"]
-  text = req_data["text"]
+  threadTitle = req_data['title']
+  text = req_data['text']
 
   # Create the timestamp
   ts = time.time()
@@ -319,11 +344,18 @@ def create_threads(forum_id):
   #If authorized user, insert
   if(b_auth.check_credentials(username, password, DATABASE)):
     if forum_id_found(int(forum_id)):
-      con.execute('UPDATE threads SET id= id+1 WHERE forum_id =' + forum_id)
-      con.execute('UPDATE posts SET thread_id= thread_id+1')
+    # updates the ids
+    #   con.execute('UPDATE threads SET id= id+1 WHERE forum_id =' + forum_id)
+    #   con.execute('UPDATE posts SET thread_id= thread_id+1')
+    # inserting new items
+      db = myDb.get_db(DATABASE)
+      db.row_factory = myDb.dict_factory
+      con = db.cursor()
       con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (1,forum_id,threadTitle,username,time_stamp))
-      con.execute('INSERT INTO posts VALUES(?,?,?,?,?)', (forum_id, 1,text,username,time_stamp))
       db.commit()
+      con.close()
+
+      insert_post(forum_id, 1, text, username, time_stamp)
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
     else:
@@ -338,7 +370,6 @@ def create_threads(forum_id):
 #########################################
 # POST - Creating User
 #########################################
-
 @app.route("/users", methods=['POST'])
 def users():
     db = myDb.get_db(DATABASE)
@@ -362,7 +393,6 @@ def users():
 #########################################
 # PUT - Changing password per user request
 #########################################
-
 @app.route("/users/<username>", methods=['PUT'])
 def change_password(username):
   db = myDb.get_db(DATABASE)

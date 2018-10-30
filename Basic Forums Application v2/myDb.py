@@ -63,28 +63,28 @@ def get_db_s2():
     return db
 
 ##Teardown databases
-from app import app
+# from app import app
 
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+# @app.teardown_appcontext
+# def close_connection(exception):
+#     db = getattr(g, '_database', None)
+#     if db is not None:
+#         db.close()
+        
+# @app.teardown_appcontext
+# def close_connection(exception):
+#     db = getattr(g, '_database_s0', None)
+#     if db is not None:
+#         db.close()
 
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database_s0', None)
-    if db is not None:
-        db.close()
+# @app.teardown_appcontext
+# def close_connection(exception):
+#     db = getattr(g, '_database_s1', None)
+#     if db is not None:
+#         db.close()
 
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database_s1', None)
-    if db is not None:
-        db.close()
-
-@app.teardown_appcontext
-def close_connection(exception):
-    db = getattr(g, '_database_s2', None)
-    if db is not None:
-        db.close()
+# @app.teardown_appcontext
+# def close_connection(exception):
+#     db = getattr(g, '_database_s2', None)
+#     if db is not None:
+#         db.close()
