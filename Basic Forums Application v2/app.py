@@ -6,6 +6,17 @@
 # September 26, 2018
 #########################################
 
+#TODO: 
+'''
+    THREADS:
+        Need to be listed in reverse chronological order
+        On creation the text needs to be added to the post shard
+
+    POSTS:
+        Creation needs to update timestamp of thread
+        Need to add GUID
+'''
+
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 import json
