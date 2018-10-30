@@ -11,6 +11,7 @@ from flask_basicauth import BasicAuth
 import json
 import time, datetime
 import myDb
+
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
@@ -24,11 +25,9 @@ shard0 = './shard0.db'
 shard1 = './shard1.db'
 shard2 = './shard2.db'
 
-
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource cannot be found.</p>", 404
-
 
 #initializes the databases
 myDb.init_db(DATABASE,"init.sql",app)
@@ -39,6 +38,34 @@ myDb.init_db(shard2,"initShard.sql",app)
 #finds the shard that the post is located
 def find_shard(id):
     return "./shard" + str(int(id)%3) + ".db"
+
+
+def init_test_posts(forum_id, thread_id, body, creator, timestamp):
+    shard_num = int(thread_id) % 3
+
+    if shard_num == 0:
+      print("Shard number: " + str(shard_num) + " selected.")
+      con = myDb.get_db_s0()
+    elif shard_num == 1:
+      print("Shard number: " + str(shard_num) + " selected.")
+      con = myDb.get_db_s1()
+    elif shard_num == 2:
+      print("Shard number: " + str(shard_num) + " selected.")
+      con = myDb.get_db_s2()
+
+    con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id,body,creator,timestamp))
+
+# with app.application_context():
+#   init_test_posts(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
+#   init_test_posts(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
+#   init_test_posts(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
+#   init_test_posts(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
+#   init_test_posts(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
+#   init_test_posts(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
+#   init_test_posts(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
+#   init_test_posts(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
+#   init_test_posts(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
+#   init_test_posts(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
 
 #########################################
 # Authorization section - Check valid user
@@ -97,6 +124,24 @@ def check_validForum(value,DATABASE):
     if forum["name"] == value["name"]:
       validNewForum = False
   return validNewForum
+
+def check_forum(forum_id):
+  conn = myDb.get_connections(DATABASE)
+  checkForum = conn.execute('SELECT * FROM forums WHERE id = ' + forum_id).fetchall()
+
+  if len(checkForum) == 0:
+    return False
+  else:
+    return True
+
+def check_thread(thread_id, forum_id):
+  conn = myDb.get_connections(DATABASE)
+  checkThread = conn.execute('SELECT * FROM threads WHERE threads.id = ' + thread_id + ' AND threads.forum_id = ' + forum_id).fetchall()
+
+  if len(checkThread) == 0:
+    return False
+  else:
+    return True
 
 #########################################
 # GET - Get all forums
@@ -183,27 +228,32 @@ def post_forums():
 @app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
 def create_post(forum_id, thread_id):
 
-    #TODO: change the DATABASE to be the shard of thread_id mod 3
+    #Check to see if forum and thread exists
+    forumCheck = check_forum(forum_id)
+    threadCheck =  check_thread(thread_id, forum_id)
+
     req_data = request.get_json()
-    shard = find_shard(thread_id)
-    db = myDb.get_db(shard)
-    db.row_factory = myDb.dict_factory
-    conn = db.cursor()
-
-    #TODO: find out how to add post using only one DB
-    db = myDb.get_db(DATABASE)
-    db.row_factory = myDb.dict_factory
-    con = db.cursor()
-
     b_auth = myAuthorizor()
     check_user = request.authorization['username']
     check_pw = request.authorization['password']
+    authed = b_auth.check_credentials(check_user, check_pw, DATABASE)
 
-    #TODO: find a way to only need one db
-    forumCheck = con.execute('SELECT 1 FROM forums where id=' + forum_id).fetchall()
-    threadCheck = con.execute('SELECT 1 FROM threads where id=' + thread_id).fetchall()
+    shard_num = int(thread_id) % 3
+    if shard_num == 0:
+      print("Shard number: " + str(shard_num) + " selected.")
+      db = myDb.get_db_s0()
+    elif shard_num == 1:
+      print("Shard number: " + str(shard_num) + " selected.")
+      db = myDb.get_db_s1()
+    elif shard_num == 2:
+      print("Shard number: " + str(shard_num) + " selected.")
+      db = myDb.get_db_s2()
 
-    if len(forumCheck) != 0 or len(threadCheck) != 0:
+    db.row_factory = myDb.dict_factory
+    con = db.cursor()
+
+    if forumCheck == True and threadCheck == True:
+        check_posts = con.execute('SELECT * FROM posts').fetchall()
         # Get the post text
         post_text = req_data['text']
 
@@ -213,7 +263,7 @@ def create_post(forum_id, thread_id):
         print(time_stamp)
 
         #If authorized user, insert
-        if(b_auth.check_credentials(check_user, check_pw, DATABASE)):
+        if(authed):
           con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id, post_text,check_user,time_stamp))
           db.commit()
           check_posts = con.execute('SELECT * FROM posts').fetchall()
