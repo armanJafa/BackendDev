@@ -1,12 +1,13 @@
 import sqlite3
 from flask import Flask, request, render_template, g, jsonify,Response
 
+
 # Connects to the database
-def get_db(DATABASE):
-  db = getattr(g, '_database', None)
-  if db is None:
-       db = g._database = sqlite3.connect(DATABASE)
-  return db
+def get_db(dbName):
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(dbName)
+    return db
 
 def dict_factory(cursor, row):
   d = {}
@@ -22,7 +23,6 @@ def init_db(database, file_initializer,app):
           db.cursor().executescript(f.read())
       db.commit()
       db.close()
-  print("*********************\nDATABASE INITALIZED\n*********************")
 
 #connects to DB
 def get_connections(DATABASE):
@@ -30,3 +30,61 @@ def get_connections(DATABASE):
   conn.row_factory = dict_factory
   cur = conn.cursor()
   return cur
+
+###################################
+# Testing to see if we need to
+# create separate connections
+##################################
+
+DATABASE = './data.db'
+shard0 = './shard0.db'
+shard1 = './shard1.db'
+shard2 = './shard2.db'
+
+#Create connection for first shard
+def get_db_s0():
+    db = getattr(g, '_database_s0', None)
+    if db is None:
+        db = g._database_s0 = sqlite3.connect(shard0)
+    return db
+
+#Create connection for second shard
+def get_db_s1():
+    db = getattr(g, '_database_s1', None)
+    if db is None:
+        db = g._database_s1 = sqlite3.connect(shard1)
+    return db
+
+#Create connection for third shard
+def get_db_s2():
+    db = getattr(g, '_database_s2', None)
+    if db is None:
+        db = g._database_s2 = sqlite3.connect(shard2)
+    return db
+
+##Teardown databases
+from app import app
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database_s0', None)
+    if db is not None:
+        db.close()
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database_s1', None)
+    if db is not None:
+        db.close()
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database_s2', None)
+    if db is not None:
+        db.close()
