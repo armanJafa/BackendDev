@@ -199,6 +199,7 @@ def create_post(forum_id, thread_id):
     check_user = request.authorization['username']
     check_pw = request.authorization['password']
 
+    #TODO: find a way to only need one db
     forumCheck = con.execute('SELECT 1 FROM forums where id=' + forum_id).fetchall()
     threadCheck = con.execute('SELECT 1 FROM threads where id=' + thread_id).fetchall()
 
