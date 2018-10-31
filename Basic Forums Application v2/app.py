@@ -89,16 +89,7 @@ def insert_thread(id,forum_id,title,creator, timestamp):
 
 #begins initialization of the posts
 with app.app_context():
-#   insert_post(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
-#   insert_post(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
-#   insert_post(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
-#   insert_post(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
-#   insert_post(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
-#   insert_post(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
-#   insert_post(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
-#   insert_post(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
-#   insert_post(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
-#   insert_post(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
+
   insert_thread(1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT")
   insert_thread(2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT")
   insert_thread(3, 1, "Ask MongoDB questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
@@ -108,6 +99,16 @@ with app.app_context():
   insert_thread(4, 2, "Ask Redis questeions here!", "charlie", "Tue, 06 Sep 2018 17:18:43 GMT")
   insert_thread(5, 2, "Ask C questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
   insert_thread(6, 2, "Ask FOO questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
+  insert_post(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
+  insert_post(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
+  insert_post(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
+  insert_post(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
+  insert_post(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
+  insert_post(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
+  insert_post(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
+  insert_post(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
+  insert_post(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
+  insert_post(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
 #########################################
 # Authorization section - Check valid user
 #########################################
