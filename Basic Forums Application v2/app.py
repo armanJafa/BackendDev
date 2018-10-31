@@ -8,9 +8,6 @@
 
 #TODO: 
 '''
-    Basic_Auth:
-        fix basic auth
-
     THREADS:
         Need to be listed in reverse chronological order
         On creation the text needs to be added to the post shard
@@ -74,23 +71,43 @@ def insert_post(forum_id, thread_id, body, creator, timestamp):
     #initializing POSTs into the shards
     db.row_factory = myDb.dict_factory
     con = db.cursor()
-    con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id,body,creator,timestamp))
+    tmp = datetime.datetime.strptime(timestamp,"%a, %d %b %Y %H:%M:%S %Z")
+    con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id,body,creator,tmp))
     db.commit()
-    con.close()
+    myDb.teardown_db("shard" + str(shard_num))
+
+def insert_thread(id,forum_id,title,creator, timestamp):
+    db = myDb.get_db(DATABASE)
+    #initializing threads into the shards
+    db.row_factory = myDb.dict_factory
+    con = db.cursor()
+    tmp = datetime.datetime.strptime(timestamp,"%a, %d %b %Y %H:%M:%S %Z")
+    con.execute('INSERT INTO threads VALUES(?,?,?,?,?)',(id,forum_id,title,creator, tmp))
+    db.commit()
+    myDb.teardown_db(DATABASE)
+
 
 #begins initialization of the posts
 with app.app_context():
-  insert_post(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
-  insert_post(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
-  insert_post(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
-  insert_post(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
-  insert_post(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
-  insert_post(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
-  insert_post(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
-  insert_post(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
-  insert_post(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
-  insert_post(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
-
+#   insert_post(1,1,"Never gonna give you up","Charlie","Tue, 07 Sep 2018 14:49:36 GMT")
+#   insert_post(1,2,"Never gonna let you down ","Charlie","Tue, 03 Sep 2018 11:49:36 GMT")
+#   insert_post(1,3,"Never gonna run around and desert you","Charlie","Wed, 04 Sep 2018 01:49:36 GMT")
+#   insert_post(1,4,"Never gonna make you cry","Charlie","Fri, 02 Sep 2018 12:49:36 GMT")
+#   insert_post(2,1,"Never gonna say goodbye","Charlie","Tue, 01 Sep 2018 23:49:36 GMT")
+#   insert_post(2,2,"Never gonna tell a lie and hurt you","Charlie","Mon, 07 Sep 2018 22:49:36 GMT")
+#   insert_post(2,3,"Never gonna give you up","Charlie","Sat, 09 Sep 2018 12:49:36 GMT")
+#   insert_post(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
+#   insert_post(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
+#   insert_post(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
+  insert_thread(1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT")
+  insert_thread(2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT")
+  insert_thread(3, 1, "Ask MongoDB questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
+  insert_thread(1, 2, "Ask PYTHON questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
+  insert_thread(2, 2, "Ask Java questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
+  insert_thread(3, 2, "Ask JS questeions here!", "bob", "Tue, 06 Sep 2018 17:18:43 GMT")
+  insert_thread(4, 2, "Ask Redis questeions here!", "charlie", "Tue, 06 Sep 2018 17:18:43 GMT")
+  insert_thread(5, 2, "Ask C questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
+  insert_thread(6, 2, "Ask FOO questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT")
 #########################################
 # Authorization section - Check valid user
 #########################################
@@ -197,7 +214,7 @@ def get_forums():
 @app.route("/forums/<forum_id>", methods=['GET'])
 def threads(forum_id):
     con = myDb.get_connections(DATABASE)
-    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id + ' ORDER BY id'
+    query = 'SELECT id, forum_id, title, creator, time_created FROM threads WHERE forum_id=' + forum_id + ' ORDER  BY time_created DESC'
     all_threads = con.execute(query).fetchall()
     if len(all_threads)==0:
         return page_not_found(404)
@@ -298,8 +315,9 @@ def create_post(forum_id, thread_id):
         # Create the timestamp
         ts = time.time()
         time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
-        print(time_stamp)
-
+        tmp = time_stamp + "GMT"
+        time_stamp = datetime.datetime.strptime(tmp,'%a, %d %b %Y %H:%M:%S %Z')
+        
         #If authorized user, insert
         if(authed):
           con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id, post_text,check_user,time_stamp))
@@ -307,6 +325,15 @@ def create_post(forum_id, thread_id):
           check_posts = con.execute('SELECT * FROM posts').fetchall()
           response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + " for new forum.", 201, mimetype = 'application/json')
           response.headers['Location'] = "/forums/" + forum_id + "/" + thread_id + str(1)
+          myDb.teardown_db("shard"+str(shard_num))
+         
+          db = myDb.get_db(DATABASE)
+          db.row_factory = myDb.dict_factory
+          con = db.cursor()
+          con.execute('UPDATE threads SET time_created = ? WHERE forum_id = ? AND id = ?', (time_stamp,forum_id,thread_id))
+          db.commit()
+          myDb.teardown_db(DATABASE)
+
         else:
           invalMsg = "HTTP 401 Not Authorized"
           response = Response(invalMsg, 404, mimetype = 'application/json')
@@ -335,8 +362,9 @@ def create_threads(forum_id):
 
   # Create the timestamp
   ts = time.time()
-  time_stamp = st = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
-
+  time_stamp = datetime.datetime.fromtimestamp(ts).strftime('%a, %d %b %Y %H:%M:%S %Z')
+  tmp = time_stamp + "GMT"
+  time_stamp = datetime.datetime.strptime(tmp,'%a, %d %b %Y %H:%M:%S %Z')
   #If authorized user, insert
   if(b_auth.check_credentials(username, password, DATABASE)):
     if forum_id_found(int(forum_id)):
@@ -353,7 +381,7 @@ def create_threads(forum_id):
       db.commit()
       db.close()
 
-      insert_post(forum_id, currentId+1, text, username, time_stamp)
+      insert_post(forum_id, currentId+1, text, username, tmp)
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(currentId+1) +" for new thread.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
     else:

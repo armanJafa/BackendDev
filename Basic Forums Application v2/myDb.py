@@ -2,12 +2,6 @@ import sqlite3
 from flask import Flask, request, render_template, g, jsonify,Response
 
 
-# Connects to the database
-def get_db(dbName):
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(dbName)
-    return db
 
 def dict_factory(cursor, row):
   d = {}
@@ -31,15 +25,17 @@ def get_connections(DATABASE):
   cur = conn.cursor()
   return cur
 
-###################################
-# Testing to see if we need to
-# create separate connections
-##################################
-
 DATABASE = './data.db'
 shard0 = './shard0.db'
 shard1 = './shard1.db'
 shard2 = './shard2.db'
+
+# Connects to the database
+def get_db(dbName):
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = sqlite3.connect(dbName)
+    return db
 
 #Create connection for first shard
 def get_db_s0():
@@ -62,29 +58,7 @@ def get_db_s2():
         db = g._database_s2 = sqlite3.connect(shard2)
     return db
 
-##Teardown databases
-# from app import app
-
-# @app.teardown_appcontext
-# def close_connection(exception):
-#     db = getattr(g, '_database', None)
-#     if db is not None:
-#         db.close()
-        
-# @app.teardown_appcontext
-# def close_connection(exception):
-#     db = getattr(g, '_database_s0', None)
-#     if db is not None:
-#         db.close()
-
-# @app.teardown_appcontext
-# def close_connection(exception):
-#     db = getattr(g, '_database_s1', None)
-#     if db is not None:
-#         db.close()
-
-# @app.teardown_appcontext
-# def close_connection(exception):
-#     db = getattr(g, '_database_s2', None)
-#     if db is not None:
-#         db.close()
+def teardown_db(database):
+    db = g.pop(database, None)
+    if db is not None:
+        db.close()
