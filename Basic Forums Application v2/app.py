@@ -202,7 +202,7 @@ def check_thread(thread_id, forum_id):
 #########################################
 # GET - Get all forums
 #########################################
-@app.route("/forums/", methods=['GET'])
+@app.route("/forums", methods=['GET'])
 def get_forums():
     con = myDb.get_connections(DATABASE)
     all_forums = con.execute('SELECT * FROM forums').fetchall()
@@ -238,7 +238,7 @@ def posts(forum_id, thread_id):
 #########################################
 # POST - Create forum
 #########################################
-@app.route("/forums/", methods=['POST'])
+@app.route("/forums", methods=['POST'])
 def post_forums():
 
   b_auth = myAuthorizor()
