@@ -23,9 +23,10 @@ from flask_basicauth import BasicAuth
 import json
 import time, datetime
 import myDb
+import sqlite3
+import uuid
 
 app = Flask(__name__)
-#app.url_map.strict_slashes = False
 
 #########################################
 # Initialzie, create and fill database
@@ -68,11 +69,13 @@ def insert_post(forum_id, thread_id, body, creator, timestamp):
       print("Shard number: " + str(shard_num) + " selected.")
       db = myDb.get_db_s2()
 
+    uuidData = str(uuid.uuid4())
+
     #initializing POSTs into the shards
     db.row_factory = myDb.dict_factory
     con = db.cursor()
     tmp = datetime.datetime.strptime(timestamp,"%a, %d %b %Y %H:%M:%S %Z")
-    con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id,body,creator,tmp))
+    con.execute('INSERT INTO posts VALUES(?,?,?,?,?,?)',(uuidData,forum_id,thread_id,body,creator,tmp))
     db.commit()
     myDb.teardown_db("shard" + str(shard_num))
 
@@ -86,8 +89,7 @@ def insert_thread(id,forum_id,title,creator, timestamp):
     db.commit()
     myDb.teardown_db(DATABASE)
 
-
-#begins initialization of the posts
+# #begins initialization of the posts
 with app.app_context():
 
   insert_thread(1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT")
@@ -109,6 +111,7 @@ with app.app_context():
   insert_post(2,4,"Never gonna let you down","Charlie","Tue, 11 Sep 2018 04:49:36 GMT")
   insert_post(2,5,"Never gonna run around and desert you","Charlie","Tue, 19 Sep 2018 04:49:36 GMT")
   insert_post(2,6,"Never gonna make you cry","Charlie","Tue, 16 Sep 2018 04:49:36 GMT")
+
 #########################################
 # Authorization section - Check valid user
 #########################################

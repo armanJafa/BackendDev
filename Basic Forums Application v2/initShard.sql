@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS posts;
 
 CREATE TABLE posts (
+	guid varchar(50) PRIMARY KEY,
 	forum_id INT NOT NULL,
 	thread_id INT NOT NULL,
 	body TEXT NOT NULL,
