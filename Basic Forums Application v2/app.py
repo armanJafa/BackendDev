@@ -311,6 +311,8 @@ def create_post(forum_id, thread_id):
     db.row_factory = myDb.dict_factory
     con = db.cursor()
 
+    dataUUID = str(uuid.uuid4())
+
     if forumCheck == True and threadCheck == True:
         check_posts = con.execute('SELECT * FROM posts').fetchall()
         # Get the post text
@@ -324,7 +326,7 @@ def create_post(forum_id, thread_id):
         
         #If authorized user, insert
         if(authed):
-          con.execute('INSERT INTO posts VALUES(?,?,?,?,?)',(forum_id,thread_id, post_text,check_user,time_stamp))
+          con.execute('INSERT INTO posts VALUES(?,?,?,?,?,?)',(dataUUID, forum_id,thread_id, post_text,check_user,time_stamp))
           db.commit()
           check_posts = con.execute('SELECT * FROM posts').fetchall()
           response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + " for new forum.", 201, mimetype = 'application/json')
