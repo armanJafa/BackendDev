@@ -8,6 +8,9 @@
 
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
+from cassandra import ConsistencyLevel
+from cassandra.cluster import Cluster
+from cassandra.query import SimpleStatement
 import json
 import sqlite3
 import time, datetime
@@ -21,6 +24,8 @@ app.url_map.strict_slashes = False
 
 # Sets the path of the database
 DATABASE = './data.db'
+
+KEYSPACE = 'forum'
 
 # Connects to the database
 def get_db():
@@ -48,6 +53,26 @@ def init_db():
       db.commit()
   print("*********************\nDATABASE INITALIZED\n*********************")
 
+
+def init_cassandra():
+    cluster = Cluster(['172.17.0.2'])
+    session = cluster.connect()
+
+    rows = session.execute("SELECT * from system_schema.keyspaces")
+    if KEYSPACE in [row[0] for row in rows]:
+        print("dropping existing keyspace...")
+        session.execute("DROP KEYSPACE " + KEYSPACE)
+
+    print("creating keyspace...")
+    session.execute("""CREATE KEYSPACE IF NOT EXISTS %s
+                       WITH replication =
+                       { 'class': 'SimpleStrategy', 'replication_factor': '3'}
+                       """ % KEYSPACE)
+
+    session.set_keyspace(KEYSPACE)
+
+
+
 #connects to DB
 def get_connections():
   conn = get_db()
@@ -56,6 +81,7 @@ def get_connections():
   return cur
 
 init_db()
+init_cassandra()
 
 #########################################
 # Authorization section - Check valid user
