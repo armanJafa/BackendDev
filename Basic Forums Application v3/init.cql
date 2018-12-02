@@ -1,6 +1,6 @@
 --Dropping tables to clear data from DB for testing--
-DROP KEYSPACE IF EXISTS forumApp; 
-CREATE KEYSPACE forumApp 
+DROP KEYSPACE IF EXISTS forum; 
+CREATE KEYSPACE forum
 	WITH REPLICATION = { 
 		'class' : 'SimpleStrategy',
 		'replication_factor': 3 
@@ -14,27 +14,26 @@ DROP TABLE IF EXISTS threads;
 DROP TABLE IF EXISTS auth_users;
 DROP TABLE IF EXISTS posts;
 
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE forums (
-	id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,
-	name TEXT NOT NULL,
-	creator TEXT NOT NULL,
-	FOREIGN KEY(creator) REFERENCES auth_users(username)
+	id int,
+	name text,
+	creator text,
+	PRIMARY KEY (id)
 );
 
 CREATE TABLE threads (
-	id INTEGER NOT NULL,
-	forum_id INT NOT NULL ,
-	title TEXT NOT NULL,
-	creator TEXT NOT NULL,
-	time_created TEXT NOT NULL,
-	FOREIGN KEY(creator) REFERENCES auth_users(username)
+	id int,
+	forum_id int,
+	title text,
+	creator text,
+	time_created text,
+	PRIMARY KEY(id)
 );
 
 CREATE TABLE auth_users (
-	username TEXT PRIMARY KEY NOT NULL UNIQUE,
-	password TEXT NOT NULL
+	username text,
+	password text,
+	PRIMARY KEY(username)
 );
 
 --Generating test cases--

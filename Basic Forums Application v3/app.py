@@ -15,6 +15,8 @@ import json
 import sqlite3
 import time, datetime
 
+
+
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
@@ -24,7 +26,6 @@ app.url_map.strict_slashes = False
 
 # Sets the path of the database
 DATABASE = './data.db'
-
 KEYSPACE = 'forum'
 
 # Connects to the database
@@ -55,21 +56,62 @@ def init_db():
 
 
 def init_cassandra():
-    cluster = Cluster(['172.17.0.2'])
-    session = cluster.connect()
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
 
-    rows = session.execute("SELECT * from system_schema.keyspaces")
-    if KEYSPACE in [row[0] for row in rows]:
-        print("dropping existing keyspace...")
-        session.execute("DROP KEYSPACE " + KEYSPACE)
+  rows = session.execute("SELECT * from system_schema.keyspaces")
+  if KEYSPACE in [row[0] for row in rows]:
+      session.execute("DROP KEYSPACE " + KEYSPACE)
 
-    print("creating keyspace...")
-    session.execute("""CREATE KEYSPACE IF NOT EXISTS %s
-                       WITH replication =
-                       { 'class': 'SimpleStrategy', 'replication_factor': '3'}
-                       """ % KEYSPACE)
+  session.execute("""CREATE KEYSPACE IF NOT EXISTS %s
+                     WITH replication =
+                     {'class': 'SimpleStrategy', 'replication_factor': '3'}"""
+                     % KEYSPACE)
 
-    session.set_keyspace(KEYSPACE)
+  session.set_keyspace(KEYSPACE)
+
+  session.execute("""DROP TABLE IF EXISTS forums""")
+  session.execute("""DROP TABLE IF EXISTS threads""")
+  session.execute("""DROP TABLE IF EXISTS auth_users""")
+  session.execute("""DROP TABLE IF EXISTS posts""")
+
+  session.execute("""CREATE TABLE forums (
+                  	id int,
+                  	name text,
+                  	creator text,
+                  	PRIMARY KEY (id)
+                  )""")
+
+  session.execute("""CREATE TABLE threads (
+                  	id int,
+                  	forum_id int,
+                  	title text,
+                  	creator text,
+                  	time_created text,
+                  	PRIMARY KEY(id)
+                  )""")
+
+  session.execute("""CREATE TABLE auth_users (
+                  	username text,
+                  	password text,
+                  	PRIMARY KEY(username)
+                  )""")
+
+  query = SimpleStatement("INSERT INTO auth_users (username, password) VALUES(%s, %s)")
+  session.execute(query, ("alice", "Gr3atPA$$W0Rd"))
+  session.execute(query, ("bob", "Gr3atPA$$W0Rd"))
+  session.execute(query, ("charlie", "Gr3atPA$$W0Rd"))
+
+  query = SimpleStatement("INSERT INTO forums(id, name, creator) VALUES(%s, %s, %s)")
+
+  session.execute(query, (1, "redis", "alice"))
+  session.execute(query, (2, "mongodb", "bob"))
+
+  query = SimpleStatement("INSERT INTO threads(id, forum_id, title, creator, time_created) VALUES(%s, %s, %s, %s, %s)")
+
+  session.execute(query, (1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT"))
+  session.execute(query, ((2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT")))
+
 
 
 
