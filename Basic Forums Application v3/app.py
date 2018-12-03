@@ -14,6 +14,7 @@ from cassandra.query import SimpleStatement
 import json
 import sqlite3
 import time, datetime
+import uuid
 
 
 
@@ -83,12 +84,21 @@ def init_cassandra():
                   )""")
 
   session.execute("""CREATE TABLE threads (
-                  	id int,
+                    id UUID PRIMARY KEY,
+                  	thread_id int,
                   	forum_id int,
                   	title text,
                   	creator text,
                   	time_created text,
-                  	PRIMARY KEY(id)
+                  )""")
+
+  session.execute("""CREATE TABLE posts (
+                    id UUID PRIMARY KEY,
+                    forum_id int,
+                    thread_id int,
+                    body text,
+                    creator text,
+                    created text
                   )""")
 
   session.execute("""CREATE TABLE auth_users (
@@ -97,6 +107,7 @@ def init_cassandra():
                   	PRIMARY KEY(username)
                   )""")
 
+  session.execute("CREATE INDEX forum_number ON threads (forum_id)")
   query = SimpleStatement("INSERT INTO auth_users (username, password) VALUES(%s, %s)")
   session.execute(query, ("alice", "Gr3atPA$$W0Rd"))
   session.execute(query, ("bob", "Gr3atPA$$W0Rd"))
@@ -107,11 +118,23 @@ def init_cassandra():
   session.execute(query, (1, "redis", "alice"))
   session.execute(query, (2, "mongodb", "bob"))
 
-  query = SimpleStatement("INSERT INTO threads(id, forum_id, title, creator, time_created) VALUES(%s, %s, %s, %s, %s)")
+  query = SimpleStatement("INSERT INTO threads(id, thread_id, forum_id, title, creator, time_created) VALUES(%s, %s, %s, %s, %s, %s)")
 
-  session.execute(query, (1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT"))
-  session.execute(query, ((2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT")))
+  uuidData = uuid.uuid4()
+  session.execute(query, (uuidData, 1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT"))
+  uuidData = uuid.uuid4()
+  session.execute(query, (uuidData, 2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT"))
 
+  query = SimpleStatement("INSERT INTO posts(id, forum_id, thread_id, body, creator, created) VALUES(%s, %s, %s, %s, %s, %s)")
+
+  uuidData = uuid.uuid4()
+  session.execute(query, (uuidData, 1, 1, "I'm trying to connect to MongoDB, but it doesn't seem to be running.", "bob", "Tue, 04 Sep 2018 15:42:28 GMT"))
+  uuidData = uuid.uuid4()
+  session.execute(query, (uuidData, 1, 1, "Ummm. maybe 'sudo service start mongodb'?", "bob", "Tue, 04 Sep 2018 15:45:36 GMT"))
+  uuidData = uuid.uuid4()
+  session.execute(query, (uuidData, 1, 2, "I need help with it", "charlie", "Tue, 06 Sep 2018 17:18:43 GMT"))
+  uuidData = uuid.uuid4()
+  session.execute(query, (uuidData, 2, 1, "It is some new framework for Redis.. disregard..", "charlie", "Tue, 04 Sep 2018 13:49:36 GMT"))
 
 
 
@@ -185,24 +208,32 @@ def check_validForum(value):
 
 @app.route("/forums/", methods=['GET'])
 def get_forums():
-    con = get_connections()
-    all_forums = con.execute('SELECT * FROM forums').fetchall()
-    print(all_forums)
-    return jsonify(all_forums)
+    # con = get_connections()
+    # all_forums = con.execute('SELECT * FROM forums').fetchall()
+    # print(all_forums)
+    cluster = Cluster(['172.17.0.2'])
+    session = cluster.connect()
+    session.set_keyspace(KEYSPACE)
+    all_forums = session.execute('SELECT * FROM forums')
+    return jsonify(list(all_forums))
 
-#########################################
+########################################
 # GET - Get all threads as requested
 #########################################
 
 @app.route("/forums/<forum_id>", methods=['GET'])
 def threads(forum_id):
-    con = get_connections()
-    query = 'SELECT * FROM threads WHERE forum_id=' + forum_id + ' ORDER BY id'
-    all_threads = con.execute(query).fetchall()
-    if len(all_threads)==0:
+    # con = get_connections()
+    cluster = Cluster(['172.17.0.2'])
+    session = cluster.connect()
+    session.set_keyspace(KEYSPACE)
+    query = SimpleStatement("SELECT * FROM threads WHERE forum_id="+forum_id)
+    all_threads = session.execute(query)
+    print(all_threads[0])
+    if len(list(all_threads))==0:
         return page_not_found(404)
     else:
-        return jsonify(all_threads)
+        return jsonify(list(all_threads))
 
 #########################################
 # GET - Get all threads as requested
