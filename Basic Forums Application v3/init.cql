@@ -1,13 +1,13 @@
 --Dropping tables to clear data from DB for testing--
-DROP KEYSPACE IF EXISTS forum; 
+DROP KEYSPACE IF EXISTS forum;
 CREATE KEYSPACE forum
-	WITH REPLICATION = { 
+	WITH REPLICATION = {
 		'class' : 'SimpleStrategy',
-		'replication_factor': 3 
-		}; 
-			
+		'replication_factor': 3
+		};
 
-USE forumApp; 
+
+USE forum;
 
 DROP TABLE IF EXISTS forums;
 DROP TABLE IF EXISTS threads;

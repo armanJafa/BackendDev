@@ -9,6 +9,8 @@
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 from cassandra import ConsistencyLevel
+
+from init_cql import init_cassandra
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 import json
@@ -16,136 +18,19 @@ import sqlite3
 import time, datetime
 import uuid
 
-
-
 app = Flask(__name__)
 app.url_map.strict_slashes = False
+
+KEYSPACE = 'forum'
 
 #########################################
 # Initialzie, create and fill database
 #########################################
 
-# Sets the path of the database
-DATABASE = './data.db'
-KEYSPACE = 'forum'
-
-# Connects to the database
-def get_db():
-  db = getattr(g, '_database', None)
-  if db is None:
-       db = g._database = sqlite3.connect(DATABASE)
-  return db
-
-def dict_factory(cursor, row):
-  d = {}
-  for idx, col in enumerate(cursor.description):
-    d[col[0]] = row[idx]
-  return d
-
 @app.errorhandler(404)
 def page_not_found(e):
     return "<h1>404</h1><p>The resource cannot be found.</p>", 404
 
-#initializes the data base using flask
-def init_db():
-  with app.app_context():
-      db = get_db()
-      with app.open_resource('init.sql', mode='r') as f:
-          db.cursor().executescript(f.read())
-      db.commit()
-  print("*********************\nDATABASE INITALIZED\n*********************")
-
-
-def init_cassandra():
-  cluster = Cluster(['172.17.0.2'])
-  session = cluster.connect()
-
-  rows = session.execute("SELECT * from system_schema.keyspaces")
-  if KEYSPACE in [row[0] for row in rows]:
-      session.execute("DROP KEYSPACE " + KEYSPACE)
-
-  session.execute("""CREATE KEYSPACE IF NOT EXISTS %s
-                     WITH replication =
-                     {'class': 'SimpleStrategy', 'replication_factor': '3'}"""
-                     % KEYSPACE)
-
-  session.set_keyspace(KEYSPACE)
-
-  session.execute("""DROP TABLE IF EXISTS forums""")
-  session.execute("""DROP TABLE IF EXISTS threads""")
-  session.execute("""DROP TABLE IF EXISTS auth_users""")
-  session.execute("""DROP TABLE IF EXISTS posts""")
-
-  session.execute("""CREATE TABLE forums (
-                  	id int,
-                  	name text,
-                  	creator text,
-                  	PRIMARY KEY (id)
-                  )""")
-
-  session.execute("""CREATE TABLE threads (
-                    id UUID PRIMARY KEY,
-                  	thread_id int,
-                  	forum_id int,
-                  	title text,
-                  	creator text,
-                  	time_created text,
-                  )""")
-
-  session.execute("""CREATE TABLE posts (
-                    id UUID PRIMARY KEY,
-                    forum_id int,
-                    thread_id int,
-                    body text,
-                    creator text,
-                    created text
-                  )""")
-
-  session.execute("""CREATE TABLE auth_users (
-                  	username text,
-                  	password text,
-                  	PRIMARY KEY(username)
-                  )""")
-
-  session.execute("CREATE INDEX forum_number ON threads (forum_id)")
-  query = SimpleStatement("INSERT INTO auth_users (username, password) VALUES(%s, %s)")
-  session.execute(query, ("alice", "Gr3atPA$$W0Rd"))
-  session.execute(query, ("bob", "Gr3atPA$$W0Rd"))
-  session.execute(query, ("charlie", "Gr3atPA$$W0Rd"))
-
-  query = SimpleStatement("INSERT INTO forums(id, name, creator) VALUES(%s, %s, %s)")
-
-  session.execute(query, (1, "redis", "alice"))
-  session.execute(query, (2, "mongodb", "bob"))
-
-  query = SimpleStatement("INSERT INTO threads(id, thread_id, forum_id, title, creator, time_created) VALUES(%s, %s, %s, %s, %s, %s)")
-
-  uuidData = uuid.uuid4()
-  session.execute(query, (uuidData, 1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT"))
-  uuidData = uuid.uuid4()
-  session.execute(query, (uuidData, 2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT"))
-
-  query = SimpleStatement("INSERT INTO posts(id, forum_id, thread_id, body, creator, created) VALUES(%s, %s, %s, %s, %s, %s)")
-
-  uuidData = uuid.uuid4()
-  session.execute(query, (uuidData, 1, 1, "I'm trying to connect to MongoDB, but it doesn't seem to be running.", "bob", "Tue, 04 Sep 2018 15:42:28 GMT"))
-  uuidData = uuid.uuid4()
-  session.execute(query, (uuidData, 1, 1, "Ummm. maybe 'sudo service start mongodb'?", "bob", "Tue, 04 Sep 2018 15:45:36 GMT"))
-  uuidData = uuid.uuid4()
-  session.execute(query, (uuidData, 1, 2, "I need help with it", "charlie", "Tue, 06 Sep 2018 17:18:43 GMT"))
-  uuidData = uuid.uuid4()
-  session.execute(query, (uuidData, 2, 1, "It is some new framework for Redis.. disregard..", "charlie", "Tue, 04 Sep 2018 13:49:36 GMT"))
-
-
-
-#connects to DB
-def get_connections():
-  conn = get_db()
-  conn.row_factory = dict_factory
-  cur = conn.cursor()
-  return cur
-
-init_db()
 init_cassandra()
 
 #########################################
@@ -162,11 +47,14 @@ init_cassandra()
 class myAuthorizor(BasicAuth):
   def check_credentials(self, username, password):
     valid = False
-    conn = get_connections()
-    data = conn.execute('SELECT * FROM auth_users').fetchall()
-    for entry in data:
-      if entry["username"] == username and entry["password"] == password:
-        valid = True
+    cluster = Cluster(['172.17.0.2'])
+    session = cluster.connect()
+    session.set_keyspace(KEYSPACE)
+    query = SimpleStatement('SELECT username, password FROM auth_users')
+    data = session.execute(query)
+    for row in data:
+        if row.username == username and row.password == password:
+            valid = True
     return valid
 
 def forum_id_found(value):
@@ -183,22 +71,29 @@ def forum_id_found(value):
   return validNewForum
 
 def valid_username(newUsername):
-  conn = get_connections()
-  data = conn.execute('SELECT * FROM auth_users').fetchall()
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
+  session.set_keyspace(KEYSPACE)
+
+  query = SimpleStatement('SELECT * FROM auth_users')
+  data = session.execute(query)
   validNewUser = True
   for user in data:
-    if user["username"] == newUsername:
+    if user.username == newUsername:
       validNewUser = False
   return validNewUser
 
-
 #checks for valid new Forum entry
 def check_validForum(value):
-  conn = get_connections()
-  all_info = conn.execute('SELECT * FROM forums').fetchall()
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
+  session.set_keyspace(KEYSPACE)
+
+  query = SimpleStatement('SELECT * FROM forums')
+  data = session.execute(query)
   validNewForum = True
-  for forum in all_info:
-    if forum["name"] == value["name"]:
+  for forum in data:
+    if forum.name == value["name"]:
       validNewForum = False
   return validNewForum
 
@@ -215,6 +110,7 @@ def get_forums():
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
     all_forums = session.execute('SELECT * FROM forums')
+    cluster.shutdown()
     return jsonify(list(all_forums))
 
 ########################################
@@ -227,9 +123,10 @@ def threads(forum_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    query = SimpleStatement("SELECT * FROM threads WHERE forum_id="+forum_id)
+    query = SimpleStatement('SELECT * FROM threads WHERE forum_id='+forum_id)
     all_threads = session.execute(query)
     print(all_threads[0])
+    cluster.shutdown()
     if len(list(all_threads))==0:
         return page_not_found(404)
     else:
@@ -241,12 +138,16 @@ def threads(forum_id):
 
 @app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
 def posts(forum_id, thread_id):
-    con = get_connections()
-    all_posts = con.execute('SELECT * FROM posts WHERE posts.forum_id = ' + forum_id + ' AND posts.thread_id = ' + thread_id).fetchall()
-    if len(all_posts) == 0:
+    cluster = Cluster(['172.17.0.2'])
+    session = cluster.connect()
+    session.set_keyspace(KEYSPACE)
+    query = SimpleStatement('SELECT * FROM posts')# + forum_id + " AND thread_id = " + thread_id " ALLOW FILTERING;")
+    all_posts = session.execute(query)
+    cluster.shutdown()
+    if len(list(all_posts)) == 0:
         return page_not_found(404)
     else:
-        return jsonify(all_posts)
+        return jsonify(list(all_posts))
 
 #########################################
 # POST - Create forum
@@ -256,12 +157,18 @@ def posts(forum_id, thread_id):
 def post_forums():
 
   b_auth = myAuthorizor()
-  db = get_db()
-  db.row_factory = dict_factory
-  conn = db.cursor()
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
+  session.set_keyspace(KEYSPACE)
+
+  #Get the next ID for new forum
+  query = SimpleStatement('SELECT * FROM forums')
+  data = session.execute(query)
+  count = len(list(data))
+  count += 1
 
   #pulls all forums and makes it to a json obj
-  all_forums = conn.execute('SELECT * FROM forums').fetchall()
+  all_forums = session.execute('SELECT * FROM forums')
   req_data = request.get_json()
 
   #checks for valid forum entry
@@ -275,8 +182,12 @@ def post_forums():
     if b_auth.check_credentials(username, password):
       #inserts into the database
       forumName = req_data['name']
-      conn.execute('INSERT INTO forums(name,creator) VALUES(\''+forumName+'\',\''+ username+'\')')
-      db.commit()
+      session.execute(
+            """
+                INSERT INTO forums (id, name, creator)
+                VALUES (%s,%s, %s)
+            """, (count, forumName, username)
+        )
 
       #returns a success response
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forumName +" for new forum.",201,mimetype = 'application/json')
