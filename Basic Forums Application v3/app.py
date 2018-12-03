@@ -9,7 +9,6 @@
 from flask import Flask, request, render_template, g, jsonify,Response
 from flask_basicauth import BasicAuth
 from cassandra import ConsistencyLevel
-
 from init_cql import init_cassandra
 from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
@@ -185,7 +184,7 @@ def post_forums():
       session.execute(
             """
                 INSERT INTO forums (id, name, creator)
-                VALUES (%s,%s, %s)
+                VALUES (%s,%s,%s)
             """, (count, forumName, username)
         )
 
@@ -314,46 +313,72 @@ def users():
 
 @app.route("/users/<username>", methods=['PUT'])
 def change_password(username):
-  db = get_db()
-  db.row_factory = dict_factory
-  con = db.cursor()
+  #Connect to DB
+  b_auth = myAuthorizor()
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
+  session.set_keyspace(KEYSPACE)
 
-  check_user = con.execute('SELECT * FROM auth_users WHERE username= "' + username + '"').fetchall()
+  #Get data from request
+  username = request.authorization['username']
+  password = request.authorization['password']
 
-  if len(check_user)==0:
-    ## RETURN 404 - USER NOT FOUND
-    message = {
-            'status': 404,
-            'message': 'User Not Found: ' + username,
-    }
-    resp = jsonify(message)
-    resp.status_code = 404
+  #Check if username is in DB
+  valid = False
+  query = SimpleStatement('SELECT username FROM auth_users')
+  data = session.execute(query)
+  for row in data:
+      if row.username == username:
+          valid = True
 
-    return resp
+  if valid is False:
+      ## RETURN 404 - USER NOT FOUND
+      message = {
+              'status': 404,
+              'message': 'User Not Found: ' + username,
+      }
+      resp = jsonify(message)
+      resp.status_code = 404
 
+      return resp
   elif request.authorization['username'] != username:
-    message = {
-            'status': 409,
-            'message': 'Username: ' + username + ' does not match authorized user: ' + request.authorization['username'],
-    }
-    resp = jsonify(message)
-    resp.status_code = 409
+      message = {
+              'status': 409,
+              'message': 'Username: ' + username + ' does not match authorized user: ' + request.authorization['username'],
+      }
+      resp = jsonify(message)
+      resp.status_code = 409
 
-    return resp
+      return resp
 
-  user_update = request.get_json()
+  if b_auth.check_credentials(username, password):
+      user_update = request.get_json()
+      newPassword = user_update['password']
+      session.execute('UPDATE auth_users SET password=%s WHERE username=%s',(newPassword, username,))
+      updated_user = session.execute('SELECT * FROM auth_users WHERE username=%s',(username,))
 
-  con.execute('UPDATE auth_users SET password="' + user_update['password'] + '" WHERE username="' + username + '"')
-  updated_user = con.execute('SELECT * FROM auth_users WHERE username="' + username + '"').fetchall()
+      print("*****Checking Credentials*****")
+      for row in updated_user:
+          print ("Username: " + row.username)
+          print ("Password: " + row.password)
+      print("*****Checking Credentials*****")
 
-  print("*****Checking Credentials*****")
-  print(check_user)
-  print(updated_user)
-  print("*****Checking Credentials*****")
+      message = {
+              'Message': "Password updated successfully",
+              'Username': row.username,
+              'Password': row.password,
+      }
+      updated_pw = jsonify(message)
+      return updated_pw
+  else:
+       message = {
+               'status': 401,
+               'message': 'Not Authorized',
+       }
+       resp = jsonify(message)
+       resp.status_code = 401
+       return resp
 
-  db.commit()
-
-  return jsonify(updated_user)
 
 if __name__ == "__main__":
 
