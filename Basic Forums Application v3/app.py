@@ -102,12 +102,10 @@ def check_validForum(value):
 
 @app.route("/forums/", methods=['GET'])
 def get_forums():
-    # con = get_connections()
-    # all_forums = con.execute('SELECT * FROM forums').fetchall()
-    # print(all_forums)
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
+
     all_forums = session.execute('SELECT * FROM forums')
     cluster.shutdown()
     return jsonify(list(all_forums))
@@ -124,7 +122,6 @@ def threads(forum_id):
     session.set_keyspace(KEYSPACE)
     query = SimpleStatement('SELECT * FROM threads WHERE forum_id='+forum_id)
     all_threads = session.execute(query)
-    print(all_threads[0])
     cluster.shutdown()
     if len(list(all_threads))==0:
         return page_not_found(404)
@@ -132,7 +129,7 @@ def threads(forum_id):
         return jsonify(list(all_threads))
 
 #########################################
-# GET - Get all threads as requested
+# GET - Get all posts as requested
 #########################################
 
 @app.route("/forums/<forum_id>/<thread_id>", methods=['GET'])
@@ -140,7 +137,7 @@ def posts(forum_id, thread_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    query = SimpleStatement('SELECT * FROM posts')# + forum_id + " AND thread_id = " + thread_id " ALLOW FILTERING;")
+    query = SimpleStatement('SELECT * FROM posts WHERE forum_id=%s AND thread_id=%s', (forum_id, thread_id,))
     all_posts = session.execute(query)
     cluster.shutdown()
     if len(list(all_posts)) == 0:
@@ -378,7 +375,6 @@ def change_password(username):
        resp = jsonify(message)
        resp.status_code = 401
        return resp
-
 
 if __name__ == "__main__":
 
