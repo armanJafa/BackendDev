@@ -57,15 +57,16 @@ class myAuthorizor(BasicAuth):
     return valid
 
 def forum_id_found(value):
-  conn = get_connections()
-  all_info = conn.execute('SELECT * FROM forums').fetchall()
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
+  session.set_keyspace(KEYSPACE)
+
+  all_info = session.execute('SELECT * FROM forums')
   validNewForum = False
   for forum in all_info:
-    print(forum["id"])
-    print(forum["id"] == int(value))
-    if forum["id"] == value:
+    print forum.id
+    if forum.id == value:
       validNewForum = True
-  conn.close()
   print(validNewForum)
   return validNewForum
 
@@ -105,9 +106,7 @@ def get_forums():
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-
     all_forums = session.execute('SELECT * FROM forums')
-    cluster.shutdown()
     return jsonify(list(all_forums))
 
 ########################################
@@ -120,10 +119,9 @@ def threads(forum_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    query = SimpleStatement('SELECT * FROM threads WHERE forum_id='+forum_id)
+    query = SimpleStatement('SELECT * FROM threads WHERE forum_id=%s',(forum_id,))
     all_threads = session.execute(query)
     print(all_threads[0])
-    cluster.shutdown()
     if len(list(all_threads))==0:
         return page_not_found(404)
     else:
@@ -138,10 +136,8 @@ def posts(forum_id, thread_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    query = SimpleStatement('SELECT * FROM posts WHERE forum_id='+ forum_id + ' AND thread_id=' + thread_id +' ALLOW FILTERING')
+    query = SimpleStatement('SELECT * FROM posts WHERE forum_id=%s AND thread_id=%s ALLOW FILTERING',(forum_id,thread_id,))
     all_posts = session.execute(query)
-    print(all_posts[0])
-    cluster.shutdown()
     if len(list(all_posts)) == 0:
         return page_not_found(404)
     else:
@@ -205,17 +201,17 @@ def post_forums():
 
 @app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
 def create_post(forum_id, thread_id):
-    db = get_db()
-    db.row_factory = dict_factory
-    con = db.cursor()
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
+  session.set_keyspace(KEYSPACE)
 
     b_auth = myAuthorizor()
     req_data = request.get_json()
     check_user = request.authorization['username']
     check_pw = request.authorization['password']
 
-    forumCheck = con.execute('SELECT 1 FROM forums where id=' + forum_id).fetchall()
-    threadCheck = con.execute('SELECT 1 FROM threads where id=' + thread_id).fetchall()
+    forumCheck = session.execute('SELECT 1 FROM forums where id=%s',(forum_id,))
+    threadCheck = session.execute('SELECT 1 FROM threads where id=%s',(thread_id,))
 
     if len(forumCheck) != 0 or len(threadCheck) != 0:
         # Get the post text
@@ -228,9 +224,7 @@ def create_post(forum_id, thread_id):
 
         #If authorized user, insert
         if(b_auth.check_credentials(check_user, check_pw)):
-          con.execute('INSERT INTO posts VALUES(' + forum_id + ', ' + thread_id + ',\'' + post_text + '\', \'' + check_user + '\',\'' + time_stamp + '\')')
-          db.commit()
-          check_posts = con.execute('SELECT * FROM posts').fetchall()
+          session.execute('INSERT INTO posts VALUES(%s,%s,%s,%s,%s)',(forum_id,thread_id,post_text,check_user,time_stamp,))
           response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + " for new forum.", 201, mimetype = 'application/json')
           response.headers['Location'] = "/forums/" + forum_id + "/" + thread_id + str(1)
         else:
@@ -246,11 +240,12 @@ def create_post(forum_id, thread_id):
  #########################################
 @app.route("/forums/<forum_id>", methods=['POST'])
 def create_threads(forum_id):
-  db = get_db()
-  db.row_factory = dict_factory
-  con = db.cursor()
   b_auth = myAuthorizor()
   req_data = request.get_json()
+
+  cluster = Cluster(['172.17.0.2'])
+  session = cluster.connect()
+  session.set_keyspace(KEYSPACE)
 
   #gets input from user
   username = request.authorization['username']
@@ -267,11 +262,11 @@ def create_threads(forum_id):
   #If authorized user, insert
   if(b_auth.check_credentials(username, password)):
     if forum_id_found(int(forum_id)):
-      con.execute('UPDATE threads SET id= id+1 WHERE forum_id =' + forum_id)
-      con.execute('UPDATE posts SET thread_id= thread_id+1')
-      con.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(?,?,?,?,?)', (1,forum_id,threadTitle,username,time_stamp))
-      con.execute('INSERT INTO posts VALUES(?,?,?,?,?)', (forum_id, 1,text,username,time_stamp))
-      db.commit()
+      session.execute('UPDATE threads SET id= id+1 WHERE forum_id =%s',(forum_id,))
+      session.execute('UPDATE posts SET thread_id=thread_id+1')
+      session.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(%s,%s,%s,%s,%s)', (1,forum_id,threadTitle,username,time_stamp))
+      session.execute('INSERT INTO posts VALUES(%s,%s,%s,%s,%s)', (forum_id,1,text,username,time_stamp))
+
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
     else:
@@ -288,17 +283,16 @@ def create_threads(forum_id):
 
 @app.route("/users", methods=['POST'])
 def users():
-    db = get_db()
-    db.row_factory = dict_factory
-    conn = db.cursor()
+    cluster = Cluster(['172.17.0.2'])
+    session = cluster.connect()
+    session.set_keyspace(KEYSPACE)
 
     req_data = request.get_json()
     newUser = req_data['username']
     newPass = req_data['password']
 
     if valid_username(newUser):
-      conn.execute('INSERT INTO auth_users(username,password) VALUES(\''+newUser+'\',\''+ newPass+'\')')
-      db.commit()
+      session.execute('INSERT INTO auth_users(username,password) VALUES(%s,%s)',(newUser,newPass,))
       #returns a success response
       response = Response("HTTP 201 Created",201,mimetype = 'application/json')
     else:
