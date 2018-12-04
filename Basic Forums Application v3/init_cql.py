@@ -38,21 +38,23 @@ def init_cassandra():
                   )""")
 
   session.execute("""CREATE TABLE threads (
-                    id UUID PRIMARY KEY,
+                    id UUID,
                   	thread_id int,
                   	forum_id int,
                   	title text,
                   	creator text,
                   	time_created text,
+                    PRIMARY KEY (id)
                   )""")
 
   session.execute("""CREATE TABLE posts (
-                    id UUID PRIMARY KEY,
+                    id UUID,
                     forum_id int,
                     thread_id int,
                     body text,
                     creator text,
-                    created text
+                    created text,
+                    PRIMARY KEY((forum_id, thread_id), id)
                   )""")
 
   session.execute("""CREATE TABLE auth_users (
@@ -60,10 +62,10 @@ def init_cassandra():
                   	password text,
                   	PRIMARY KEY(username)
                   )""")
-
+  #
   session.execute("CREATE INDEX forum_number ON threads (forum_id)")
-  session.execute("CREATE INDEX forum_id ON posts (forum_id)")
-  session.execute("CREATE INDEX thread_id ON posts (thread_id)")
+  # session.execute("CREATE INDEX forum_id ON posts (forum_id)")
+  # session.execute("CREATE INDEX thread_id ON posts (thread_id)")
   query = SimpleStatement("INSERT INTO auth_users (username, password) VALUES(%s, %s)")
   session.execute(query, ("alice", "Gr3atPA$$W0Rd"))
   session.execute(query, ("bob", "Gr3atPA$$W0Rd"))
@@ -80,7 +82,8 @@ def init_cassandra():
   session.execute(query, (uuidData, 1, 1, "Does anyone know how to start Redis?", "bob", "Wed, 05 Sep 2018 16:22:29 GMT"))
   uuidData = uuid.uuid4()
   session.execute(query, (uuidData, 2, 1, "Has anyone heard of Edis?", "charlie", "Tue, 04 Sep 2018 13:18:43 GMT"))
-
+  uuidData = uuid.uuid4()
+  session.execute(query, (uuidData, 1, 2, "Ask MongoDB questeions here!", "alice", "Tue, 06 Sep 2018 17:18:43 GMT"))
   query = SimpleStatement("INSERT INTO posts(id, forum_id, thread_id, body, creator, created) VALUES(%s, %s, %s, %s, %s, %s)")
 
   uuidData = uuid.uuid4()
