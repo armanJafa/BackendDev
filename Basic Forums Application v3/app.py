@@ -64,7 +64,7 @@ def forum_id_found(value):
   all_info = session.execute('SELECT * FROM forums')
   validNewForum = False
   for forum in all_info:
-    print forum.id
+    print(forum.id)
     if forum.id == value:
       validNewForum = True
   print(validNewForum)
@@ -119,8 +119,8 @@ def threads(forum_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    query = SimpleStatement('SELECT * FROM threads WHERE forum_id=%s',(forum_id,))
-    all_threads = session.execute(query)
+    # query = SimpleStatement()
+    all_threads = session.execute('SELECT * FROM threads WHERE forum_id=' + forum_id)
     print(all_threads[0])
     if len(list(all_threads))==0:
         return page_not_found(404)
@@ -136,8 +136,9 @@ def posts(forum_id, thread_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    query = SimpleStatement('SELECT * FROM posts WHERE forum_id=%s AND thread_id=%s ALLOW FILTERING',(forum_id,thread_id,))
+    query = SimpleStatement('SELECT * FROM posts WHERE forum_id=' + forum_id +' AND thread_id='+thread_id)
     all_posts = session.execute(query)
+    print(all_posts[0])
     if len(list(all_posts)) == 0:
         return page_not_found(404)
     else:
@@ -201,9 +202,9 @@ def post_forums():
 
 @app.route("/forums/<forum_id>/<thread_id>", methods=['POST'])
 def create_post(forum_id, thread_id):
-  cluster = Cluster(['172.17.0.2'])
-  session = cluster.connect()
-  session.set_keyspace(KEYSPACE)
+    cluster = Cluster(['172.17.0.2'])
+    session = cluster.connect()
+    session.set_keyspace(KEYSPACE)
 
     b_auth = myAuthorizor()
     req_data = request.get_json()

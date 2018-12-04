@@ -87,7 +87,7 @@ def init_cassandra():
   query = SimpleStatement("INSERT INTO forum.posts(id, forum_id, thread_id, body, creator, created) VALUES(%s, %s, %s, %s, %s, %s)")
 
   uuidData = uuid.uuid4()
-  session.execute(query, (uuidData, 1, 1, $$I'm trying to connect to MongoDB, but it doesn't seem to be running.$$, $$bob$$, $$Tue, 04 Sep 2018 15:42:28 GMT$$))
+  session.execute(query, (uuidData, 1, 1, "I'm trying to connect to MongoDB, but it doesn't seem to be running.", "bob", "Tue, 04 Sep 2018 15:42:28 GMT"))
   uuidData = uuid.uuid4()
   session.execute(query, (uuidData, 1, 1, "Ummm. maybe 'sudo service start mongodb'?", "bob", "Tue, 04 Sep 2018 15:45:36 GMT"))
   uuidData = uuid.uuid4()
