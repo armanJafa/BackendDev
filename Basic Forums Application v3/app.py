@@ -122,6 +122,7 @@ def threads(forum_id):
     session.set_keyspace(KEYSPACE)
     query = SimpleStatement('SELECT * FROM threads WHERE forum_id='+forum_id)
     all_threads = session.execute(query)
+
     cluster.shutdown()
     if len(list(all_threads))==0:
         return page_not_found(404)
@@ -137,7 +138,7 @@ def posts(forum_id, thread_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    query = SimpleStatement('SELECT * FROM posts WHERE forum_id=%s AND thread_id=%s', (forum_id, thread_id,))
+    query = SimpleStatement('SELECT * FROM posts WHERE forum_id='+ forum_id + ' AND thread_id=' + thread_id +' ALLOW FILTERING')
     all_posts = session.execute(query)
     cluster.shutdown()
     if len(list(all_posts)) == 0:
