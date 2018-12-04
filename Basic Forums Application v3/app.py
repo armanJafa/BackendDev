@@ -119,13 +119,12 @@ def threads(forum_id):
     cluster = Cluster(['172.17.0.2'])
     session = cluster.connect()
     session.set_keyspace(KEYSPACE)
-    # query = SimpleStatement()
     all_threads = session.execute('SELECT * FROM threads WHERE forum_id=' + forum_id)
-    print(all_threads[0])
-    if len(list(all_threads))==0:
+    all_threads = list(all_threads)
+    if len(all_threads)==0:
         return page_not_found(404)
     else:
-        return jsonify(list(all_threads))
+        return jsonify(all_threads)
 
 #########################################
 # GET - Get all posts as requested
@@ -138,11 +137,11 @@ def posts(forum_id, thread_id):
     session.set_keyspace(KEYSPACE)
     query = SimpleStatement('SELECT * FROM posts WHERE forum_id=' + forum_id +' AND thread_id='+thread_id)
     all_posts = session.execute(query)
-    print(all_posts[0])
-    if len(list(all_posts)) == 0:
+    all_posts = list(all_posts)
+    if len(all_posts) == 0:
         return page_not_found(404)
     else:
-        return jsonify(list(all_posts))
+        return jsonify(all_posts)
 
 #########################################
 # POST - Create forum
