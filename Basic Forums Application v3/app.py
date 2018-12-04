@@ -262,7 +262,7 @@ def create_threads(forum_id):
   #If authorized user, insert
   if(b_auth.check_credentials(username, password)):
     if forum_id_found(int(forum_id)):
-      session.execute('UPDATE threads SET id= id+1 WHERE forum_id =%s',(forum_id,))
+      session.execute('UPDATE threads SET id=id+1 WHERE forum_id =%s',(forum_id,))
       session.execute('UPDATE posts SET thread_id=thread_id+1')
       session.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(%s,%s,%s,%s,%s)', (1,forum_id,threadTitle,username,time_stamp))
       session.execute('INSERT INTO posts VALUES(%s,%s,%s,%s,%s)', (forum_id,1,text,username,time_stamp))
