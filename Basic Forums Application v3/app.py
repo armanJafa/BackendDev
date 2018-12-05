@@ -224,7 +224,8 @@ def create_post(forum_id, thread_id):
 
         #If authorized user, insert
         if(b_auth.check_credentials(check_user, check_pw)):
-          session.execute('INSERT INTO posts VALUES(%s,%s,%s,%s,%s)',(forum_id,thread_id,post_text,check_user,time_stamp,))
+          uuid_data = uuid.uuid4()
+          session.execute('INSERT INTO posts(id,forum_id,thread_id,body,creator,created) VALUES(%s,%s,%s,%s,%s,%s)',(uuid_Data,forum_id,thread_id,post_text,check_user,time_stamp,))
           response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + " for new forum.", 201, mimetype = 'application/json')
           response.headers['Location'] = "/forums/" + forum_id + "/" + thread_id + str(1)
         else:
@@ -262,10 +263,11 @@ def create_threads(forum_id):
   #If authorized user, insert
   if(b_auth.check_credentials(username, password)):
     if forum_id_found(int(forum_id)):
+      uuid_data = uuid.uuid4()
       session.execute('UPDATE threads SET id=id+1 WHERE forum_id =%s',(forum_id,))
       session.execute('UPDATE posts SET thread_id=thread_id+1')
-      session.execute('INSERT INTO threads(id,forum_id,title,creator,time_created) VALUES(%s,%s,%s,%s,%s)', (1,forum_id,threadTitle,username,time_stamp))
-      session.execute('INSERT INTO posts VALUES(%s,%s,%s,%s,%s)', (forum_id,1,text,username,time_stamp))
+      session.execute('INSERT INTO threads(thread_id,id,forum_id,title,creator,time_created) VALUES(%s,%s,%s,%s,%s,%s)', (1,uuid_data,forum_id,threadTitle,username,time_stamp))
+      session.execute('INSERT INTO posts posts(id,forum_id,thread_id,body,creator,created) VALUES(%s,%s,%s,%s,%s,%s)',(uuid_Data,forum_id,1,post_text,check_user,time_stamp,))
 
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
