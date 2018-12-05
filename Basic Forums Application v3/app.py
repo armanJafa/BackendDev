@@ -91,9 +91,12 @@ def check_validForum(value):
 
   query = SimpleStatement('SELECT * FROM forums')
   data = session.execute(query)
+  print(data[0].name)
   validNewForum = True
   for forum in data:
-    if forum.name == value["name"]:
+    name = str(forum.name)
+    print(value["name"])
+    if name == value["name"]:
       validNewForum = False
   return validNewForum
 
@@ -210,10 +213,10 @@ def create_post(forum_id, thread_id):
     check_user = request.authorization['username']
     check_pw = request.authorization['password']
 
-    forumCheck = session.execute('SELECT 1 FROM forums where id=%s',(forum_id,))
-    threadCheck = session.execute('SELECT 1 FROM threads where id=%s',(thread_id,))
+    forumCheck = session.execute('SELECT * FROM forums where id='+ forum_id +' LIMIT 1')
+    threadCheck = session.execute('SELECT * FROM threads where thread_id='+thread_id +' LIMIT 1 ALLOW FILTERING')
 
-    if len(forumCheck) != 0 or len(threadCheck) != 0:
+    if len(list(forumCheck)) != 0 or len(list(threadCheck)) != 0:
         # Get the post text
         post_text = req_data['text']
 
@@ -224,8 +227,14 @@ def create_post(forum_id, thread_id):
 
         #If authorized user, insert
         if(b_auth.check_credentials(check_user, check_pw)):
-          uuid_data = uuid.uuid4()
-          session.execute('INSERT INTO posts(id,forum_id,thread_id,body,creator,created) VALUES(%s,%s,%s,%s,%s,%s)',(uuid_Data,forum_id,thread_id,post_text,check_user,time_stamp,))
+          query = SimpleStatement("INSERT INTO forum.posts(id, forum_id, thread_id, body, creator, created) VALUES(%s, %s, %s, %s, %s, %s)")
+          forum_id = int(forum_id)
+          thread_id = int(thread_id)
+          uuid_Data = uuid.uuid4()
+          session.execute(query, (uuid_Data,forum_id,thread_id,post_text,check_user,time_stamp,))
+
+          forum_id = str(forum_id)
+          thread_id = str(thread_id)
           response = Response("HTTP 201 Created\n" + "Location Header field set to /forums/" + forum_id + "/" + thread_id + " for new forum.", 201, mimetype = 'application/json')
           response.headers['Location'] = "/forums/" + forum_id + "/" + thread_id + str(1)
         else:
@@ -252,6 +261,11 @@ def create_threads(forum_id):
   username = request.authorization['username']
   password = request.authorization['password']
 
+  data = session.execute("SELECT * FROM threads")
+  print(data[0])
+  id_update = int(data[0].thread_id)
+  id_update = id_update+1
+
   #gets json input
   threadTitle = req_data["title"]
   text = req_data["text"]
@@ -264,11 +278,14 @@ def create_threads(forum_id):
   if(b_auth.check_credentials(username, password)):
     if forum_id_found(int(forum_id)):
       uuid_data = uuid.uuid4()
-      session.execute('UPDATE threads SET id=id+1 WHERE forum_id =%s',(forum_id,))
-      session.execute('UPDATE posts SET thread_id=thread_id+1')
-      session.execute('INSERT INTO threads(thread_id,id,forum_id,title,creator,time_created) VALUES(%s,%s,%s,%s,%s,%s)', (1,uuid_data,forum_id,threadTitle,username,time_stamp))
-      session.execute('INSERT INTO posts posts(id,forum_id,thread_id,body,creator,created) VALUES(%s,%s,%s,%s,%s,%s)',(uuid_Data,forum_id,1,post_text,check_user,time_stamp,))
+      forum_id = int(forum_id)
 
+      # session.execute('UPDATE threads SET thread_id=thread_id+1 WHERE forum_id =%s',(forum_id,))
+      # session.execute('UPDATE posts SET thread_id=thread_id+1')
+      session.execute('INSERT INTO threads(thread_id,id,forum_id,title,creator,time_created) VALUES(%s,%s,%s,%s,%s,%s)', (id_update,uuid_data,forum_id,threadTitle,username,time_stamp))
+      session.execute('INSERT INTO posts(id,forum_id,thread_id,body,creator,created) VALUES(%s,%s,%s,%s,%s,%s)',(uuid_data,forum_id,id_update,text,username,time_stamp,))
+
+      forum_id = str(forum_id)
       response = Response("HTTP 201 Created\n" + "Location header field set to /forums/"+ forum_id + "/" + str(1) +" for new thread.",201,mimetype = 'application/json')
       response.headers['Location'] = "/forums/" + forum_id + "/" + str(1)
     else:

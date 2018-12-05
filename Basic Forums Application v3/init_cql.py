@@ -44,8 +44,8 @@ def init_cassandra():
                   	title text,
                   	creator text,
                   	time_created text,
-                    PRIMARY KEY (id)
-                  )""")
+                    PRIMARY KEY (forum_id, thread_id, id)
+                  )WITH CLUSTERING ORDER BY (thread_id DESC, id ASC)""")
 
   session.execute("""CREATE TABLE posts (
                     id UUID,
@@ -54,16 +54,17 @@ def init_cassandra():
                     body text,
                     creator text,
                     created text,
-                    PRIMARY KEY((forum_id, thread_id), id)
-                  )""")
+                    PRIMARY KEY((forum_id, thread_id), created)
+                  ) WITH CLUSTERING ORDER BY (created ASC)""")
 
   session.execute("""CREATE TABLE auth_users (
                   	username text,
                   	password text,
                   	PRIMARY KEY(username)
                   )""")
-  #
-  session.execute("CREATE INDEX forum_number ON threads (forum_id)")
+
+  # session.execute("CREATE INDEX forum_number ON threads (forum_id)")
+  # session.execute("CREATE INDEX thread_number ON threads (thread_id)")
   # session.execute("CREATE INDEX forum_id ON posts (forum_id)")
   # session.execute("CREATE INDEX thread_id ON posts (thread_id)")
   query = SimpleStatement("INSERT INTO auth_users (username, password) VALUES(%s, %s)")
